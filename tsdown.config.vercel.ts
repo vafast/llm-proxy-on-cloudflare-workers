@@ -8,4 +8,5 @@ export default defineConfig({
   minify: true,
   dts: false,
   outputOptions: { codeSplitting: false },
+  outExtensions: () => ({ js: ".js" }),
 });
