@@ -78,7 +78,7 @@ npm run start
 
 **Vercel：**
 
-通过 `vercel-build` 脚本将 `src/vercel.ts` 打包为 `api/index.mjs` 后部署到 Vercel。
+通过 `vercel-build` 脚本将 `api/index.ts` 打包为 `api/index.js` 后部署到 Vercel。
 
 <details>
 <summary><strong>Vercel 部署指南（点击展开）</strong></summary>
@@ -155,8 +155,9 @@ ENABLE_GLOBAL_ROUND_ROBIN=false
 
 Vercel 部署时自动执行 `npm run vercel-build`：
 
-1. 使用 esbuild 将 `src/vercel.ts` 及其所有依赖打包为单文件 `api/index.mjs`
-2. Vercel 检测到 `api/index.mjs` 并作为 Serverless Function 部署
+1. 使用 tsdown 将 `api/index.ts` 及其所有 `src/` 依赖打包为单文件 `api/index.js`
+2. 删除 `api/index.ts`（仅在构建环境中，不影响 Git 仓库）
+3. Vercel 检测到 `api/index.js` 并作为 Serverless Function 部署
 4. `vercel.json` 的 rewrite 规则将所有请求路由到该 Function
 
 #### 注意事项
@@ -314,7 +315,6 @@ npm run tsc          # TypeScript 类型检查
 ```
 src/
 ├── index.ts              # Node.js 服务入口
-├── vercel.ts             # Vercel Serverless Function 入口
 ├── common/env.ts         # 环境变量（Zod 校验）
 ├── routes/               # Vafast 路由定义
 ├── middleware/            # 中间件（鉴权、错误处理、AI Gateway 等）
@@ -322,7 +322,8 @@ src/
 ├── providers/            # LLM 厂商适配
 ├── ai_gateway/           # Cloudflare AI Gateway 集成
 └── utils/                # 工具函数
-api/                          # Vercel 构建产物（.gitignore）
+api/
+└── index.ts              # Vercel Serverless 入口（部署时由 tsdown 打包替换）
 ```
 
 ## 已知限制
