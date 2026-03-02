@@ -6,13 +6,12 @@
 
 ## 功能特性
 
-- **统一鉴权** — 用一个 `PROXY_API_KEY` 代理所有 LLM 厂商
+- **统一鉴权** — 用 `PROXY_API_KEY` 或 Admin 创建的 Key 代理所有 LLM 厂商
 - **透传端点** — 请求直接转发至各 LLM 厂商原始 API
   - 例：`/openai/chat/completions`、`/google-ai-studio/v1beta/models/gemini-2.5-pro:generateContent`
 - **OpenAI 兼容端点** — 无缝接入 OpenAI SDK 和已有工具
   - `/v1/chat/completions`
   - `/v1/models`
-- **Cloudflare AI Gateway 集成** — 可选接入 [AI Gateway](https://developers.cloudflare.com/ai-gateway/) 实现日志、分析、限流等
 - **全局轮询 Key** — 通过 Redis 或内存实现分布式 Key 轮询
 - **路径参数选 Key** — URL 中使用 `/key/{index|range}/` 指定或限定 API Key 范围
 - **Admin Key 管理** — 通过 `/admin/keys` 动态创建、管理代理 Key（需 PostgreSQL）
@@ -20,30 +19,28 @@
 ```mermaid
 flowchart LR
   A[客户端] --> B(LLM Proxy)
-  B --> C(Cloudflare AI Gateway)
-  B --> D
-  C --> D["LLM API (OpenAI, Gemini, Anthropic ...)"]
+  B --> D["LLM API (OpenAI, Gemini, Anthropic ...)"]
 ```
 
 ## 支持的厂商
 
-| 厂商             | Chat Completions | 透传 | AI Gateway | 路由名              | 环境变量                                     |
-| ---------------- | :--------------: | :--: | :--------: | ------------------- | -------------------------------------------- |
-| OpenAI           | ✅               | ✅   | ✅         | `openai`            | `OPENAI_API_KEY`                             |
-| Google AI Studio | ✅               | ✅   | ✅         | `google-ai-studio`  | `GEMINI_API_KEY`                             |
-| Anthropic        | ✅               | ✅   | ✅         | `anthropic`         | `ANTHROPIC_API_KEY`                          |
-| Cerebras         | ✅               | ❌   | ✅         | `cerebras`          | `CEREBRAS_API_KEY`                           |
-| Cohere           | ✅               | ✅   | ✅         | `cohere`            | `COHERE_API_KEY`                             |
-| DeepSeek         | ✅               | ✅   | ✅         | `deepseek`          | `DEEPSEEK_API_KEY`                           |
-| Grok             | ✅               | ✅   | ✅         | `grok`              | `GROK_API_KEY`                               |
-| Groq             | ✅               | ✅   | ✅         | `groq`              | `GROQ_API_KEY`                               |
-| Mistral          | ✅               | ✅   | ✅         | `mistral`           | `MISTRAL_API_KEY`                            |
-| Perplexity       | ✅               | ✅   | ✅         | `perplexity`        | `PERPLEXITY_API_KEY`                         |
-| OpenRouter       | ✅               | ✅   | ✅         | `openrouter`        | `OPENROUTER_API_KEY`                         |
-| Workers AI       | ✅               | ✅   | ✅         | `workers-ai`        | `CLOUDFLARE_ACCOUNT_ID` `CLOUDFLARE_API_KEY` |
-| HuggingFace      | ❌               | ✅   | ✅         | `huggingface`       | `HUGGINGFACE_API_KEY`                        |
-| Replicate        | ❌               | ✅   | ✅         | `replicate`         | `REPLICATE_API_KEY`                          |
-| Ollama           | ✅               | ✅   | ❌         | `ollama`            | `OLLAMA_API_KEY`                             |
+| 厂商             | Chat Completions | 透传 | 路由名              | 环境变量                                     |
+| ---------------- | :--------------: | :--: | ------------------- | -------------------------------------------- |
+| OpenAI           | ✅               | ✅   | `openai`            | `OPENAI_API_KEY`                             |
+| Google AI Studio | ✅               | ✅   | `google-ai-studio`  | `GEMINI_API_KEY`                             |
+| Anthropic        | ✅               | ✅   | `anthropic`         | `ANTHROPIC_API_KEY`                          |
+| Cerebras         | ✅               | ❌   | `cerebras`          | `CEREBRAS_API_KEY`                           |
+| Cohere           | ✅               | ✅   | `cohere`            | `COHERE_API_KEY`                             |
+| DeepSeek         | ✅               | ✅   | `deepseek`          | `DEEPSEEK_API_KEY`                           |
+| Grok             | ✅               | ✅   | `grok`              | `GROK_API_KEY`                               |
+| Groq             | ✅               | ✅   | `groq`              | `GROQ_API_KEY`                               |
+| Mistral          | ✅               | ✅   | `mistral`           | `MISTRAL_API_KEY`                            |
+| Perplexity       | ✅               | ✅   | `perplexity`        | `PERPLEXITY_API_KEY`                         |
+| OpenRouter       | ✅               | ✅   | `openrouter`        | `OPENROUTER_API_KEY`                         |
+| Workers AI       | ✅               | ✅   | `workers-ai`        | `CLOUDFLARE_ACCOUNT_ID` `CLOUDFLARE_API_KEY` |
+| HuggingFace      | ❌               | ✅   | `huggingface`       | `HUGGINGFACE_API_KEY`                        |
+| Replicate        | ❌               | ✅   | `replicate`         | `REPLICATE_API_KEY`                          |
+| Ollama           | ✅               | ✅   | `ollama`            | `OLLAMA_API_KEY`                             |
 
 ## 快速开始
 
@@ -60,10 +57,10 @@ git clone <repo-url> && cd llm-proxy
 # 安装依赖
 npm install
 
-# 复制环境变量模板
+# 复制环境变量模板（.env.development 已加入 .gitignore，不会提交）
 cp .env.example .env.development
 
-# 编辑 .env.development，填入你的 API Keys
+# 编辑 .env.development，填入 PROXY_API_KEY 及 Provider API Keys
 # 然后启动开发服务器
 npm run dev
 ```
@@ -271,10 +268,9 @@ src/
 ├── common/env.ts         # 环境变量（envalid 校验）
 ├── db/                   # PostgreSQL 连接与 keys 表
 ├── routes/               # Vafast 路由定义
-├── middleware/           # 中间件（鉴权、错误处理、AI Gateway 等）
+├── middleware/           # 中间件（鉴权、错误处理等）
 ├── requests/             # 请求处理器
 ├── providers/            # LLM 厂商适配
-├── ai_gateway/           # Cloudflare AI Gateway 集成
 └── utils/                # 工具函数
 ```
 
