@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Providers } from "~/src/providers";
 import { getAllProviders } from "~/src/providers";
-import { status } from "~/src/requests/status";
+import { status } from "~/src/routes/health";
 import { Config } from "~/src/utils/config";
 import { Environments } from "~/src/utils/environments";
 import { Secrets } from "~/src/utils/secrets";
@@ -68,7 +68,6 @@ describe("status", () => {
       new Response(null, { status: 200 }),
     );
 
-    // status() 返回普通对象 { config, providers }
     const result = await status();
 
     expect(result.config).toEqual({

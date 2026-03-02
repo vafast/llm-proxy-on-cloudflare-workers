@@ -1,3 +1,4 @@
+import { getHeaderFromInit } from "../../utils/passthrough";
 import { Secrets } from "../../utils/secrets";
 import {
   OpenAIChatCompletionsRequestBody,
@@ -34,12 +35,18 @@ export class GoogleAiStudio extends ProviderBase {
       "tool_choice",
     ];
 
-  async headers(apiKeyIndex?: number): Promise<HeadersInit> {
+  async headers(
+    apiKeyIndex?: number,
+    init?: RequestInit,
+  ): Promise<Headers> {
+    if (getHeaderFromInit(init?.headers, "x-goog-api-key")) {
+      return new Headers({ "Content-Type": "application/json" });
+    }
     const apiKey = Secrets.get(this.apiKeyName, apiKeyIndex);
-    return {
+    return new Headers({
       "Content-Type": "application/json",
       "x-goog-api-key": apiKey,
-    };
+    });
   }
 
   async fetch(
@@ -48,28 +55,19 @@ export class GoogleAiStudio extends ProviderBase {
     apiKeyIndex?: number,
   ): ReturnType<typeof fetch> {
     if (pathname.startsWith("/v1beta/openai")) {
-      const apiKey = Secrets.get(this.apiKeyName, apiKeyIndex);
+      const passthroughKey = getHeaderFromInit(init?.headers, "x-goog-api-key");
+      const apiKey = passthroughKey ?? Secrets.get(this.apiKeyName, apiKeyIndex);
 
-      const newHeaders: Record<string, string> = {
-        ...(init?.headers as Record<string, string>),
-        Authorization: `Bearer ${apiKey}`,
-      };
-      delete newHeaders["x-goog-api-key"];
+      const newHeaders = new Headers(init?.headers);
+      newHeaders.set("Authorization", `Bearer ${apiKey}`);
+      newHeaders.delete("x-goog-api-key");
 
-      return super.fetch(
-        pathname,
-        {
-          ...init,
-          headers: newHeaders,
-        },
-        apiKeyIndex,
-      );
+      return super.fetch(pathname, { ...init, headers: newHeaders }, apiKeyIndex);
     } else {
       return super.fetch(pathname, init, apiKeyIndex);
     }
   }
 
-  // 将模型列表转为 OpenAI 格式
   modelsToOpenAIFormat(
     data: GoogleAiStudioModelsListResponseBody,
   ): OpenAIModelsListResponseBody {

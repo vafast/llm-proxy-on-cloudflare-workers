@@ -1,53 +1,44 @@
 import { AUTHORIZATION_QUERY_PARAMETERS } from "./authorization";
 import { randomInt } from "node:crypto";
 
+// --- URL 脱敏 ---
+
+const MASK_THRESHOLD = 10;
+const MASK_PREFIX_LENGTH = 3;
+const MASK_PLACEHOLDER = "***";
+
+const SENSITIVE_PARAMS = new Set([
+  "apikey",
+  "api_key",
+  "token",
+  "access_token",
+  "accesstoken",
+  "auth",
+  "authorization",
+  "password",
+  "secret",
+  "key",
+  "api-key",
+]);
+
 export function maskUrl(url: string): string {
-  // 脱敏相关常量
-  const MASK_THRESHOLD = 10; // 显示前缀的最小长度
-  const MASK_PREFIX_LENGTH = 3; // 脱敏前保留的字符数
-  const MASK_PLACEHOLDER = "***";
-
-  // 需脱敏的敏感参数名
-  const sensitiveParams = [
-    "apikey",
-    "api_key",
-    "token",
-    "access_token",
-    "accesstoken",
-    "auth",
-    "authorization",
-    "password",
-    "secret",
-    "key",
-    "api-key",
-  ];
-
   try {
     const urlObj = new URL(url);
 
-    // 仅脱敏敏感查询参数
     if (urlObj.search) {
       const params = new URLSearchParams(urlObj.search);
       const maskedParams = new URLSearchParams();
 
       for (const [key, value] of params.entries()) {
-        const keyLower = key.toLowerCase();
-        const isSensitive = sensitiveParams.some((param) => keyLower === param);
-
-        if (isSensitive) {
-          // 脱敏值，较长时保留前缀
+        if (SENSITIVE_PARAMS.has(key.toLowerCase())) {
           if (value.length > MASK_THRESHOLD) {
-            maskedParams.set(
-              key,
-              `${value.slice(0, MASK_PREFIX_LENGTH)}${MASK_PLACEHOLDER}`,
-            );
+            maskedParams.set(key, `${value.slice(0, MASK_PREFIX_LENGTH)}${MASK_PLACEHOLDER}`);
           } else if (value.length > 0) {
             maskedParams.set(key, MASK_PLACEHOLDER);
           } else {
             maskedParams.set(key, value);
           }
         } else {
-          // 非敏感参数保持原样
           maskedParams.set(key, value);
         }
       }
@@ -57,13 +48,11 @@ export function maskUrl(url: string): string {
 
     return urlObj.toString();
   } catch {
-    // URL 解析失败时返回脱敏版本
-    const MASK_PLACEHOLDER = "***";
-    return (
-      url.split("?")[0] + (url.includes("?") ? `?${MASK_PLACEHOLDER}` : "")
-    );
+    return url.split("?")[0] + (url.includes("?") ? `?${MASK_PLACEHOLDER}` : "");
   }
 }
+
+// --- 代理 fetch ---
 
 /**
  * Node.js fetch() 会自动解压 gzip/br 响应，但不会修改 Response.headers，
@@ -84,14 +73,22 @@ function stripHopHeaders(response: Response): Response {
 
 export const fetch2: typeof fetch = async (input, init) => {
   const url = input.toString();
-  const maskedUrl = maskUrl(url);
-  console.info(`Sub-Request: ${init?.method} ${maskedUrl}`);
+  console.info(`Sub-Request: ${init?.method} ${maskUrl(url)}`);
 
-  const response = await fetch(input, init);
-  return stripHopHeaders(response);
+  try {
+    const response = await fetch(input, init);
+    return stripHopHeaders(response);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const cause = err instanceof Error && err.cause ? ` (cause: ${(err.cause as Error)?.message})` : "";
+    console.error(`Sub-Request failed: ${msg}${cause}`);
+    throw err;
+  }
 };
 
-export function safeJsonParse(text: string): string | { [key: string]: any } {
+// --- 通用工具 ---
+
+export function safeJsonParse(text: string): unknown {
   try {
     return JSON.parse(text);
   } catch {
@@ -100,46 +97,38 @@ export function safeJsonParse(text: string): string | { [key: string]: any } {
 }
 
 export function getPathname(request: Request): string {
-  return request.url.replace(new URL(request.url).origin, "");
+  return new URL(request.url).pathname;
 }
 
 export function shuffleArray<T>(array: T[]): T[] {
   const cloneArray = [...array];
-
   for (let i = cloneArray.length - 1; i > 0; i--) {
     const j = randomInt(i + 1);
     [cloneArray[i], cloneArray[j]] = [cloneArray[j], cloneArray[i]];
   }
-
   return cloneArray;
 }
 
 export function formatString(
   template: string,
-  args: { [key: string]: string },
+  args: Record<string, string>,
 ): string {
-  return Object.keys(args).reduce((formattedString: string, key) => {
-    const regExp = new RegExp(`\\{${key}\\}`, "g");
-    return formattedString.replace(regExp, args[key]);
+  return Object.keys(args).reduce((result, key) => {
+    return result.replace(new RegExp(`\\{${key}\\}`, "g"), args[key]);
   }, template);
 }
 
 export function cleanPathname(pathname: string): string {
-  let cleanedPathname = pathname;
+  let cleaned = pathname;
 
-  // 用正则移除鉴权相关查询参数
   AUTHORIZATION_QUERY_PARAMETERS.forEach((param) => {
-    // 匹配 &key=value 或 ?key=value
     const paramPattern = new RegExp(`[?&]${param}=([^&]*)`, "g");
-    cleanedPathname =     cleanedPathname.replace(
+    cleaned = cleaned.replace(
       paramPattern,
-      (match, value, offset, str) => {
-        // 首个参数 (?key=value)：若有其他参数则保留 ?
+      (match, _value, offset, str) => {
         if (match.startsWith("?") && typeof str === "string") {
           const nextAmpersand = str.indexOf("&", offset + match.length);
-          if (nextAmpersand !== -1) {
-            return "?";
-          }
+          if (nextAmpersand !== -1) return "?";
           return "";
         }
         return "";
@@ -147,14 +136,12 @@ export function cleanPathname(pathname: string): string {
     );
   });
 
-  // 清理无效查询格式如 ?&param=value
-  return cleanedPathname.replace(/\?\&/, "?");
+  return cleaned.replace(/\?\&/, "?");
 }
 
 /**
- * 使用单定时器和 AbortController 包装 Promise 超时。
- * 超时时中止 fetch 并立即 reject TimeoutError。
- * 确保定时器被清理且 Promise 在 timeoutMs 内完成。
+ * 使用 AbortController 包装 Promise 超时。
+ * 超时时中止 fetch 并 reject TimeoutError。
  */
 export async function withTimeout<T>(
   promise: Promise<T>,
@@ -165,9 +152,7 @@ export async function withTimeout<T>(
   return new Promise((resolve, reject) => {
     const timeoutId = setTimeout(() => {
       abortController.abort();
-      const timeoutError = new Error(
-        `Provider ${providerName} request timed out`,
-      );
+      const timeoutError = new Error(`Provider ${providerName} request timed out`);
       timeoutError.name = "TimeoutError";
       reject(timeoutError);
     }, timeoutMs);

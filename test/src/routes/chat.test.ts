@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Providers } from "~/src/providers";
 import { getProvider } from "~/src/providers";
-import { chatCompletions } from "~/src/requests/chat_completions";
+import { chatCompletions } from "~/src/routes/chat";
 import { Config } from "~/src/utils/config";
 import * as helpers from "~/src/utils/helpers";
 import { Secrets } from "~/src/utils/secrets";
@@ -66,7 +66,6 @@ describe("chatCompletions", () => {
     expect(mockProviderClass.buildChatCompletionsRequest).toHaveBeenCalledWith({
       body: JSON.stringify({ ...requestBody, model: "gpt-4" }),
       headers: expect.any(Headers),
-      apiKeyIndex: 0,
     });
     expect(mockProviderClass.fetch).toHaveBeenCalled();
   });
@@ -97,7 +96,6 @@ describe("chatCompletions", () => {
     expect(mockProviderClass.buildChatCompletionsRequest).toHaveBeenCalledWith({
       body: JSON.stringify({ ...requestBody, model: "gpt-4" }),
       headers: expect.any(Headers),
-      apiKeyIndex: 0,
     });
   });
 
@@ -183,7 +181,6 @@ describe("chatCompletions", () => {
     expect(mockProviderClass.buildChatCompletionsRequest).toHaveBeenCalledWith({
       body: JSON.stringify({ ...requestBody, model: "gpt-4/turbo" }),
       headers: expect.any(Headers),
-      apiKeyIndex: 0,
     });
   });
 });

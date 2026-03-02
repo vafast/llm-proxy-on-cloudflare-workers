@@ -1,9 +1,21 @@
 import { fetch2 } from "../utils/helpers";
+import { getHeaderFromInit } from "../utils/passthrough";
 import { Secrets } from "../utils/secrets";
 import {
   OpenAIChatCompletionsRequestBody,
   OpenAIModelsListResponseBody,
 } from "./openai/types";
+
+/** 将多组 headers 按顺序合并，后者覆盖前者（大小写不敏感） */
+function mergeHeaders(...sources: (HeadersInit | undefined)[]): Headers {
+  const merged = new Headers();
+  for (const src of sources) {
+    if (!src) continue;
+    const h = src instanceof Headers ? src : new Headers(src);
+    h.forEach((v, k) => merged.set(k, v));
+  }
+  return merged;
+}
 
 export class ProviderBase {
   // --- 配置属性 ---
@@ -39,7 +51,6 @@ export class ProviderBase {
       return await Secrets.getNext(this.apiKeyName);
     }
 
-    // 无 apiKeyName 的 provider 回退（如 CustomOpenAI 会覆盖）
     return 0;
   }
 
@@ -60,8 +71,11 @@ export class ProviderBase {
     return this.pathnamePrefixProp;
   }
 
-  async headers(_apiKeyIndex?: number): Promise<HeadersInit> {
-    return {};
+  async headers(
+    _apiKeyIndex?: number,
+    _init?: RequestInit,
+  ): Promise<Headers> {
+    return new Headers();
   }
 
   async buildRequest(
@@ -81,22 +95,18 @@ export class ProviderBase {
   ): Promise<RequestInit> {
     return {
       ...init,
-      headers: {
-        ...init?.headers,
-        ...(await this.headers(apiKeyIndex)),
-      },
+      headers: mergeHeaders(init?.headers, await this.headers(apiKeyIndex, init)),
     };
   }
 
   // --- OpenAI 兼容 API 方法 ---
+  // 以下方法只构建 [pathname, partialInit]，headers 由 fetch → requestData 统一 merge
   async buildChatCompletionsRequest({
     body,
-    headers = {},
-    apiKeyIndex,
+    headers,
   }: {
     body: string;
-    headers: HeadersInit;
-    apiKeyIndex?: number;
+    headers: Headers;
   }): Promise<[string, RequestInit]> {
     const data = JSON.parse(body) as OpenAIChatCompletionsRequestBody;
     const trimmedData = Object.fromEntries(
@@ -114,23 +124,15 @@ export class ProviderBase {
       {
         method: "POST",
         body: JSON.stringify(trimmedData),
-        headers: {
-          ...(await this.headers(apiKeyIndex)),
-          ...headers,
-        },
+        headers,
       },
     ];
   }
 
-  async buildModelsRequest(
-    apiKeyIndex?: number,
-  ): Promise<[string, RequestInit]> {
+  async buildModelsRequest(): Promise<[string, RequestInit]> {
     return [
       this.modelsPath,
-      {
-        method: "GET",
-        headers: await this.headers(apiKeyIndex),
-      },
+      { method: "GET" },
     ];
   }
 
@@ -178,17 +180,23 @@ export class ProviderBase {
 }
 
 export class OpenAICompatibleProvider extends ProviderBase {
-  async headers(apiKeyIndex?: number): Promise<HeadersInit> {
+  async headers(
+    apiKeyIndex?: number,
+    init?: RequestInit,
+  ): Promise<Headers> {
+    if (getHeaderFromInit(init?.headers, "Authorization")) {
+      return new Headers({ "Content-Type": "application/json" });
+    }
     const keys = this.getApiKeys();
-    if (keys.length === 0) return {};
+    if (keys.length === 0) return new Headers();
 
     const index = apiKeyIndex !== undefined ? apiKeyIndex % keys.length : 0;
     const apiKey = keys[index];
 
-    return {
+    return new Headers({
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
-    };
+    });
   }
 }
 

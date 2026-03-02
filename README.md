@@ -256,6 +256,37 @@ curl -X POST https://your-server/google-ai-studio/v1beta/models/gemini-2.5-pro:g
   -d '{"contents": [{"role": "user", "parts": [{"text": "Hello!"}]}]}'
 ```
 
+### 透传用户 Key（BYOK）
+
+当用户有自己的厂商 API key 时，可通过以下 header 透传，代理将使用用户 key 调上游（而非 env 中的厂商 key）：
+
+| 厂商 | 透传 Header |
+|------|-------------|
+| OpenAI | `X-OpenAI-Key` |
+| Anthropic | `X-Anthropic-Key` |
+| Google AI Studio | `X-Google-Key` |
+| Cerebras | `X-Cerebras-Key` |
+| Cohere | `X-Cohere-Key` |
+| DeepSeek | `X-DeepSeek-Key` |
+| Grok | `X-Grok-Key` |
+| Groq | `X-Groq-Key` |
+| Mistral | `X-Mistral-Key` |
+| OpenRouter | `X-OpenRouter-Key` |
+| Perplexity | `X-Perplexity-Key` |
+| Replicate | `X-Replicate-Key` |
+| HuggingFace | `X-HuggingFace-Key` |
+| Ollama | `X-Ollama-Key` |
+
+示例（OpenAI 透传）：
+
+```bash
+curl -X POST https://your-server/openai/v1/chat/completions \
+  -H "Authorization: Bearer $PROXY_API_KEY" \
+  -H "X-OpenAI-Key: sk-your-openai-key" \
+  -H "Content-Type: application/json" \
+  -d '{"model": "gpt-4o", "messages": [{"role": "user", "content": "Hello!"}]}'
+```
+
 ## 开发
 
 ```bash

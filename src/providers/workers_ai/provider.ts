@@ -26,15 +26,17 @@ export class WorkersAi extends ProviderBase {
     return `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai`;
   }
 
-  async headers(apiKeyIndex?: number): Promise<HeadersInit> {
+  async headers(
+    apiKeyIndex?: number,
+    _init?: RequestInit,
+  ): Promise<Headers> {
     const apiKey = Secrets.get(this.apiKeyName, apiKeyIndex);
-    return {
+    return new Headers({
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
-    };
+    });
   }
 
-  // 将模型列表转为 OpenAI 格式
   modelsToOpenAIFormat(
     data: WorkersAiModelsListResponseBody,
   ): OpenAIModelsListResponseBody {

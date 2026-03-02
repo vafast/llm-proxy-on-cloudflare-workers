@@ -11,13 +11,7 @@ export class Replicate extends ProviderBase {
   readonly apiKeyName: keyof Env = "REPLICATE_API_KEY";
   readonly baseUrlProp: string = "https://api.replicate.com/v1";
 
-  async buildChatCompletionsRequest({
-    body, // eslint-disable-line @typescript-eslint/no-unused-vars
-    headers = {}, // eslint-disable-line @typescript-eslint/no-unused-vars
-  }: {
-    body: string;
-    headers: HeadersInit;
-  }): Promise<[string, RequestInit]> {
+  async buildChatCompletionsRequest(): Promise<[string, RequestInit]> {
     throw new ProviderNotSupportedError(
       "Replicate does not support chat completions",
     );

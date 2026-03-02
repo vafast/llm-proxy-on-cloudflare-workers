@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Providers } from "~/src/providers";
 import { getAllProviders, getProvider } from "~/src/providers";
 import { ProviderNotSupportedError } from "~/src/providers/provider";
-import { models } from "~/src/requests/models";
+import { models } from "~/src/routes/models";
 import * as helpers from "~/src/utils/helpers";
 import { Secrets } from "~/src/utils/secrets";
 
@@ -17,18 +17,6 @@ vi.mock("~/src/providers", async () => {
 });
 vi.mock("~/src/utils/helpers");
 vi.mock("~/src/utils/secrets");
-
-interface ModelData {
-  id: string;
-  object: string;
-  created: number;
-  owned_by: string;
-}
-
-interface ModelsResponse {
-  object: string;
-  data: ModelData[];
-}
 
 describe("models", () => {
   const mockProviderClass = {
@@ -111,7 +99,6 @@ describe("models", () => {
   });
 
   it("should return models from all available providers", async () => {
-    // models() 返回普通对象，非 Response
     const result = await models({} as any);
 
     expect(result).toEqual({

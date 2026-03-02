@@ -13,10 +13,10 @@ export class HuggingFace extends ProviderBase {
 
   async buildChatCompletionsRequest({
     body, // eslint-disable-line @typescript-eslint/no-unused-vars
-    headers = {}, // eslint-disable-line @typescript-eslint/no-unused-vars
+    headers = new Headers(), // eslint-disable-line @typescript-eslint/no-unused-vars
   }: {
     body: string;
-    headers: HeadersInit;
+    headers: Headers;
   }): Promise<[string, RequestInit]> {
     throw new ProviderNotSupportedError(
       "HuggingFace does not support chat completions",

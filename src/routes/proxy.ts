@@ -6,11 +6,66 @@
  * 注：代理需返回 Response（流式/SSE），不得已直接返回
  */
 import { defineRoute, Type } from "vafast";
-import { getAllProviders } from "../providers";
-import { proxy } from "../requests/proxy";
+import { getProvider, getAllProviders } from "../providers";
 import { Environments } from "../utils/environments";
+import { NotFoundError } from "../utils/error";
+import { Secrets } from "../utils/secrets";
+import { buildForwardHeaders } from "../utils/passthrough";
 
 const PROXY_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH"] as const;
+
+/** 供单元测试使用 */
+export async function proxy(
+  request: Request,
+  providerName: string,
+  pathname: string,
+  body?: unknown,
+) {
+  const contextApiKeyIndex = request.apiKeyIndex;
+
+  const env = Environments.all();
+  const providerInstance = getProvider(providerName, env);
+
+  if (!providerInstance) {
+    throw new NotFoundError();
+  }
+
+  // 部分 provider 的 baseUrl 已包含 /v1，若 pathname 以 /v1 开头则去除以避免重复
+  let normalizedPathname = pathname;
+  if (pathname.startsWith("/v1/") || pathname === "/v1") {
+    const base = providerInstance.baseUrl();
+    if (base.endsWith("/v1") || base.endsWith("/v1/")) {
+      normalizedPathname = pathname.replace(/^\/v1/, "") || "/";
+    }
+  }
+
+  const apiKeyIndex =
+    contextApiKeyIndex !== undefined
+      ? Secrets.resolveApiKeyIndex(
+          contextApiKeyIndex,
+          providerInstance.getApiKeys().length,
+        )
+      : await providerInstance.getNextApiKeyIndex();
+
+  const rawBody: string | null =
+    body != null
+      ? typeof body === "string"
+        ? body
+        : JSON.stringify(body)
+      : null;
+
+  const forwardHeaders = buildForwardHeaders(request, providerName);
+
+  return providerInstance.fetch(
+    normalizedPathname,
+    {
+      method: request.method,
+      body: rawBody,
+      headers: forwardHeaders,
+    },
+    apiKeyIndex,
+  );
+}
 
 export function createProxyRoutes() {
   const allProviders = getAllProviders(Environments.all());
@@ -22,6 +77,7 @@ export function createProxyRoutes() {
         path: `/${providerName}/*proxyPath`,
         schema: {
           params: Type.Object({ proxyPath: Type.String() }),
+          body: Type.Optional(Type.Any()),
         },
         handler: async ({ req, body, params }) => {
           const targetPathname = "/" + params.proxyPath;

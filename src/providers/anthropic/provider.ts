@@ -1,3 +1,4 @@
+import { getHeaderFromInit } from "../../utils/passthrough";
 import { Secrets } from "../../utils/secrets";
 import { OpenAIModelsListResponseBody } from "../openai/types";
 import { ProviderBase } from "../provider";
@@ -14,16 +15,21 @@ export class Anthropic extends ProviderBase {
   readonly apiKeyName: keyof Env = "ANTHROPIC_API_KEY";
   readonly baseUrlProp: string = "https://api.anthropic.com";
 
-  async headers(apiKeyIndex?: number): Promise<HeadersInit> {
+  async headers(
+    apiKeyIndex?: number,
+    init?: RequestInit,
+  ): Promise<Headers> {
+    if (getHeaderFromInit(init?.headers, "x-api-key")) {
+      return new Headers({ "Content-Type": "application/json", "anthropic-version": "2023-06-01" });
+    }
     const apiKey = Secrets.get(this.apiKeyName, apiKeyIndex);
-    return {
+    return new Headers({
       "Content-Type": "application/json",
       "x-api-key": `${apiKey}`,
       "anthropic-version": "2023-06-01",
-    };
+    });
   }
 
-  // 将模型列表转为 OpenAI 格式
   modelsToOpenAIFormat(
     data: AnthropicModelsListResponseBody,
   ): OpenAIModelsListResponseBody {

@@ -40,25 +40,25 @@ export class CustomOpenAI extends OpenAICompatibleProvider {
     return await Secrets.getNextIndex(this.name, keys.length);
   }
 
-  async headers(apiKeyIndex?: number): Promise<HeadersInit> {
+  async headers(
+    apiKeyIndex?: number,
+    _init?: RequestInit,
+  ): Promise<Headers> {
     const keys = this.getApiKeys();
     if (keys.length === 0) {
-      return {
-        "Content-Type": "application/json",
-      };
+      return new Headers({ "Content-Type": "application/json" });
     }
 
     const index = apiKeyIndex !== undefined ? apiKeyIndex % keys.length : 0;
     const apiKey = keys[index];
 
-    return {
+    return new Headers({
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
-    };
+    });
   }
 
   available(): boolean {
-    // 自定义端点在配置中定义即视为可用
     return true;
   }
 

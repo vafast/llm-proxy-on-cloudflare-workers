@@ -10,10 +10,6 @@ describe("ProviderBase", () => {
 
   beforeEach(() => {
     providerBase = new ProviderBase();
-    // Mock 子类实现或依赖 Secrets 的方法
-    vi.spyOn(providerBase, "headers").mockResolvedValue({
-      "Content-Type": "application/json",
-    });
   });
 
   describe("available", () => {
@@ -22,14 +18,22 @@ describe("ProviderBase", () => {
     });
   });
 
-  describe("fetch", () => {
-    it("should call its own headers method", async () => {
-      const headersSpy = vi.spyOn(providerBase, "headers");
-      await providerBase.buildChatCompletionsRequest({
-        body: JSON.stringify({ messages: [] }),
-        headers: {},
-      });
-      expect(headersSpy).toHaveBeenCalled();
+  describe("requestData", () => {
+    it("should merge init headers with provider headers", async () => {
+      vi.spyOn(providerBase, "headers").mockResolvedValue(
+        new Headers({ "Content-Type": "application/json", Authorization: "Bearer key" }),
+      );
+
+      const result = await providerBase.requestData(
+        { method: "POST", headers: new Headers({ accept: "*/*" }) },
+        0,
+      );
+
+      const headers = result.headers;
+      expect(headers).toBeInstanceOf(Headers);
+      expect((headers as Headers).get("content-type")).toBe("application/json");
+      expect((headers as Headers).get("authorization")).toBe("Bearer key");
+      expect((headers as Headers).get("accept")).toBe("*/*");
     });
   });
 });

@@ -10,6 +10,7 @@
     "tsc": "tsc --noEmit",
     "test": "vitest run",
     "test-watch": "vitest watch",
+    "test:integration": "./test/integration/api-http.sh",
     "lint": "eslint 'src/**/*.ts'",
     "lint:fix": "eslint --fix 'src/**/*.ts'"
   },

@@ -11,6 +11,7 @@ import { modelsRoutes } from "./models";
 import { createProxyRoutes } from "./proxy";
 import { adminRouteConfig } from "./admin";
 import { authMiddleware } from "../middleware/auth";
+import { bodyCacheMiddleware } from "../middleware/bodyCache";
 import { extractApiKeyIndex } from "../middleware/extractApiKeyIndex";
 
 export function createAllRoutes() {
@@ -19,12 +20,11 @@ export function createAllRoutes() {
   // 核心业务路由（在多个前缀下复用）
   const coreRoutes = [...chatRoutes, ...modelsRoutes, ...proxyRoutes];
 
-  // 所有业务路由统一挂载 auth 中间件
   return defineRoutes([
     ...adminRouteConfig,
     defineRoute({
       path: "",
-      middleware: [authMiddleware],
+      middleware: [bodyCacheMiddleware, authMiddleware],
       children: [
         // 健康检查（/status）
         ...healthRoutes,

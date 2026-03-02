@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Providers } from "~/src/providers";
 import { getProvider } from "~/src/providers";
-import { proxy } from "~/src/requests/proxy";
+import { proxy } from "~/src/routes/proxy";
 import { Environments } from "~/src/utils/environments";
 import { Secrets } from "~/src/utils/secrets";
 
@@ -50,15 +50,14 @@ describe("proxy", () => {
       headers: new Headers(),
     });
 
-    // 签名：proxy(request, providerName, pathname, body?)
     await proxy(mockRequest, providerName, "/test/path");
 
     expect(mockProviderClass.fetch).toHaveBeenCalledWith(
       "/test/path",
       {
         method: mockRequest.method,
-        body: null, // 无 body 参数时 forwardBody = null
-        headers: mockRequest.headers,
+        body: null,
+        headers: expect.any(Headers),
       },
       0,
     );
@@ -82,7 +81,7 @@ describe("proxy", () => {
       {
         method: mockRequest.method,
         body: null,
-        headers: mockRequest.headers,
+        headers: expect.any(Headers),
       },
       0,
     );
