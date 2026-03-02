@@ -1,228 +1,227 @@
-# LLM Proxy on Cloudflare Workers
+# LLM Proxy
 
-English | [日本語](README_ja.md)
+通用 LLM API 代理，支持多厂商统一鉴权与 Key 轮询。可部署至 Node.js、Vercel、Docker。
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/blue-pen5805/llm-proxy-on-cloudflare-workers)
+基于 [Vafast](https://github.com/nicepkg/vafast) 框架构建，灵感来自 [LiteLLM](https://github.com/BerriAI/litellm)。
 
-This is a serverless proxy built on [Cloudflare Workers](https://www.cloudflare.com/developer-platform/products/workers/) that integrates with multiple Large Language Model (LLM) APIs. Inspired by [LiteLLM](https://github.com/BerriAI/litellm).
+## 功能特性
 
-## Features
-
-- **Centralized API Key Management:** Manage all your LLM API keys in one place.
-- **Pass-through Endpoints:** Forward requests directly to any LLM API with minimal changes.
-  - Examples: `/openai/chat/completions`, `/google-ai-studio/v1beta/models/gemini-2.5-pro:generateContent`
-- **OpenAI-Compatible Endpoints:** Use standard OpenAI endpoints for seamless integration with existing tools and libraries.
+- **统一鉴权** — 用一个 `PROXY_API_KEY` 代理所有 LLM 厂商
+- **透传端点** — 请求直接转发至各 LLM 厂商原始 API
+  - 例：`/openai/chat/completions`、`/google-ai-studio/v1beta/models/gemini-2.5-pro:generateContent`
+- **OpenAI 兼容端点** — 无缝接入 OpenAI SDK 和已有工具
   - `/v1/chat/completions`
   - `/v1/models`
-- **Cloudflare AI Gateway Integration:** Leverage [Cloudflare AI Gateway](https://www.cloudflare.com/developer-platform/products/ai-gateway/), including its [Universal Endpoint](https://developers.cloudflare.com/ai-gateway/providers/universal/), for logging, analytics, and other features.
-- **Global Round-Robin Key Rotation:** Consistency across all isolates using Cloudflare Durable Objects.
-- **API Key Selection via Path Parameter:** Explicitly select or rotate within a range of API keys using `/key/{index|range}/` in the URL path.
+- **Cloudflare AI Gateway 集成** — 可选接入 [AI Gateway](https://developers.cloudflare.com/ai-gateway/) 实现日志、分析、限流等
+- **全局轮询 Key** — 通过 Upstash Redis 或内存实现分布式 Key 轮询
+- **路径参数选 Key** — URL 中使用 `/key/{index|range}/` 指定或限定 API Key 范围
 
 ```mermaid
-flowchart
-  A[USER] -->　B(LLM Proxy)
+flowchart LR
+  A[客户端] --> B(LLM Proxy)
   B --> C(Cloudflare AI Gateway)
   B --> D
-  C --> D["LLM API (OpenAI, Google AI Studio, Anthropic ...)"]
+  C --> D["LLM API (OpenAI, Gemini, Anthropic ...)"]
 ```
 
-## Supported Providers
+## 支持的厂商
 
-| Name             | Chat Completions | Direct | AI Gateway Support | Pass-Through Routes | Environment Variable                         |
-| ---------------- | ---------------- | ------ | ------------------ | ------------------- | -------------------------------------------- |
-| OpenAI           | ✅               | ✅     | ✅                 | `openai`            | `OPENAI_API_KEY`                             |
-| Google AI Studio | ✅               | ✅     | ✅                 | `google-ai-studio`  | `GEMINI_API_KEY`                             |
-| Anthropic        | ✅               | ✅     | ✅                 | `anthropic`         | `ANTHROPIC_API_KEY`                          |
-| Cerebras         | ✅               | ❌     | ✅                 | `cerebras`          | `CEREBRAS_API_KEY`                           |
-| Cohere           | ✅               | ✅     | ✅                 | `cohere`            | `COHERE_API_KEY`                             |
-| DeepSeek         | ✅               | ✅     | ✅                 | `deepseek`          | `DEEPSEEK_API_KEY`                           |
-| Grok             | ✅               | ✅     | ✅                 | `grok`              | `GROK_API_KEY`                               |
-| Groq             | ✅               | ✅     | ✅                 | `groq`              | `GROQ_API_KEY`                               |
-| Mistral          | ✅               | ✅     | ✅                 | `mistral`           | `MISTRAL_API_KEY`                            |
-| Perplexity       | ✅               | ✅     | ✅                 | `perplexity`        | `PERPLEXITY_API_KEY`                         |
-| Azure OpenAI     | ❌               | ❌     | ❌                 | `azure-openai`      |                                              |
-| Vertex AI        | ❌               | ❌     | ❌                 | `google-vertex-ai`  |                                              |
-| Amazon Bedrock   | ❌               | ❌     | ❌                 | `aws-bedrock`       |                                              |
-| OpenRouter       | ✅               | ✅     | ✅                 | `openrouter`        | `OPENROUTER_API_KEY`                         |
-| Workers AI       | ✅               | ✅     | ✅                 | `workers-ai`        | `CLOUDFLARE_ACCOUNT_ID` `CLOUDFLARE_API_KEY` |
-| HuggingFace      | ❌               | ✅     | ✅                 | `huggingface`       | `HUGGINGFACE_API_KEY`                        |
-| Replicate        | ❌               | ✅     | ✅                 | `replicate`         | `REPLICATE_API_KEY`                          |
-| Ollama           | ✅               | ✅     | ❌                 | `ollama`            | `OLLAMA_API_KEY`                             |
+| 厂商             | Chat Completions | 透传 | AI Gateway | 路由名              | 环境变量                                     |
+| ---------------- | :--------------: | :--: | :--------: | ------------------- | -------------------------------------------- |
+| OpenAI           | ✅               | ✅   | ✅         | `openai`            | `OPENAI_API_KEY`                             |
+| Google AI Studio | ✅               | ✅   | ✅         | `google-ai-studio`  | `GEMINI_API_KEY`                             |
+| Anthropic        | ✅               | ✅   | ✅         | `anthropic`         | `ANTHROPIC_API_KEY`                          |
+| Cerebras         | ✅               | ❌   | ✅         | `cerebras`          | `CEREBRAS_API_KEY`                           |
+| Cohere           | ✅               | ✅   | ✅         | `cohere`            | `COHERE_API_KEY`                             |
+| DeepSeek         | ✅               | ✅   | ✅         | `deepseek`          | `DEEPSEEK_API_KEY`                           |
+| Grok             | ✅               | ✅   | ✅         | `grok`              | `GROK_API_KEY`                               |
+| Groq             | ✅               | ✅   | ✅         | `groq`              | `GROQ_API_KEY`                               |
+| Mistral          | ✅               | ✅   | ✅         | `mistral`           | `MISTRAL_API_KEY`                            |
+| Perplexity       | ✅               | ✅   | ✅         | `perplexity`        | `PERPLEXITY_API_KEY`                         |
+| OpenRouter       | ✅               | ✅   | ✅         | `openrouter`        | `OPENROUTER_API_KEY`                         |
+| Workers AI       | ✅               | ✅   | ✅         | `workers-ai`        | `CLOUDFLARE_ACCOUNT_ID` `CLOUDFLARE_API_KEY` |
+| HuggingFace      | ❌               | ✅   | ✅         | `huggingface`       | `HUGGINGFACE_API_KEY`                        |
+| Replicate        | ❌               | ✅   | ✅         | `replicate`         | `REPLICATE_API_KEY`                          |
+| Ollama           | ✅               | ✅   | ❌         | `ollama`            | `OLLAMA_API_KEY`                             |
 
-**Note**: Providers marked with ⚠️ have limited support for certain features (e.g., Tool Use, multimodal capabilities).
+## 快速开始
 
-## Prerequisites
+### 环境要求
 
-Before you begin, ensure you have the following installed:
+- **Node.js** >= 22.12
 
-- **Node.js:** Version `22.12+` or later is required.
-  - Download from: [nodejs.org](https://nodejs.org/)
-  - Verify your version: Run `node -v` in your terminal.
-- **Cloudflare Account:** A Free Plan is probably sufficient to deploy this project.
-  - Sign up for free at: [cloudflare.com](https://www.cloudflare.com/)
+### 安装与运行
 
-## Quick Start
+```bash
+# 克隆项目
+git clone <repo-url> && cd llm-proxy
 
-1. Clone this repository.
-2. Install dependencies: `npm install`
-3. Authenticate with Cloudflare: `npm run cf:login`
-4. Create configuration file: `cp config.example.jsonc config.jsonc`
-5. Edit `config.jsonc` with your API keys
-6. Deploy the Cloudflare Worker: `npm run deploy`
-7. Deploy secrets: `npm run secrets:deploy`
+# 安装依赖
+npm install
 
-For more detailed instructions, please refer to the [Initial Setup Guide](docs/initial-setup.md).
+# 复制环境变量模板
+cp .env.example .env.development
 
-## Environment Variables
+# 编辑 .env.development，填入你的 API Keys
+# 然后启动开发服务器
+npm run dev
+```
 
-### Required:
+### 部署方式
 
-- `PROXY_API_KEY`: API key to authenticate requests to the LLM Proxy server. (Any string can be used)
+**Node.js / Docker：**
 
-### Cloudflare AI Gateway (Optional)
+```bash
+npm run build
+npm run start
+```
 
-Set these if you are using the Cloudflare AI Gateway.
+**Vercel：**
 
-- `CLOUDFLARE_ACCOUNT_ID`: Your Cloudflare account ID.
-- `AI_GATEWAY_NAME`: Name of your AI Gateway.
-- `CF_AIG_TOKEN`: (Optional) Authentication token for your AI Gateway.
+项目包含 `api/index.ts`，直接部署到 Vercel 即可。在 Vercel 控制台配置环境变量。
+
+## 环境变量
+
+参考 `.env.example` 获取完整列表。
+
+### 必填
+
+| 变量 | 说明 |
+|------|------|
+| `PROXY_API_KEY` | 代理鉴权密钥（非 DEV 模式下必填） |
+
+### Cloudflare AI Gateway（可选）
+
+| 变量 | 说明 |
+|------|------|
+| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare 账户 ID |
+| `AI_GATEWAY_NAME` | AI Gateway 名称 |
+| `CF_AIG_TOKEN` | AI Gateway 认证 Token |
+
+### 全局 Key 轮询（可选）
+
+| 变量 | 说明 |
+|------|------|
+| `ENABLE_GLOBAL_ROUND_ROBIN` | 设为 `true` 开启全局轮询（默认 `false`） |
+| `KV_REST_API_URL` | Upstash Redis REST URL（分布式轮询时需要） |
+| `KV_REST_API_TOKEN` | Upstash Redis REST Token |
+
+未配置 Redis 时自动使用内存轮询（适用于单进程）。
 
 ### Provider API Keys
 
-Set the API key(s) for each provider you intend to use. API keys can be a single string, a comma-separated string, or a JSON-formatted string array.
+每个厂商的 Key 可以是单个字符串、逗号分隔字符串或 JSON 数组。
 
-### Custom OpenAI-Compatible Endpoints (Optional)
+### 自定义 OpenAI 兼容端点（可选）
 
-You can add your own OpenAI-compatible endpoints by configuring the `CUSTOM_OPENAI_ENDPOINTS` array in `config.jsonc`.
+通过环境变量 `CUSTOM_OPENAI_ENDPOINTS` 配置自定义端点：
 
-Example:
-
-```jsonc
-"CUSTOM_OPENAI_ENDPOINTS": [
+```json
+[
   {
-    "name": "my-custom-llm",
+    "name": "my-llm",
     "baseUrl": "https://llm.example.com",
     "apiKeys": ["your-api-key"],
-    "models": ["model-1", "model-2"] // Optional, pre-defined models list for /v1/models
+    "models": ["model-1", "model-2"]
   }
 ]
 ```
 
-Once configured, you can access the custom endpoint using its name as a pass-through route:
+配置后可通过以下方式访问：
+- 透传：`/my-llm/chat/completions`
+- OpenAI 兼容：在 `/v1/chat/completions` 中使用 `my-llm/model-1` 作为 model
 
-- Pass-through: `https://your-worker-url/my-custom-llm/chat/completions`
-- OpenAI-Compatible: Use `my-custom-llm/<model-id>` as the model name in `/v1/chat/completions` (e.g., `my-custom-llm/model-1`).
+## 路径参数选 Key
 
-### Global Round-Robin Key Rotation (Optional)
+在 URL 中添加 `/key/{spec}/` 前缀可指定 API Key：
 
-This feature ensures that API keys are rotated in a consistent round-robin order across all requests globally, using Cloudflare Durable Objects.
+| 格式 | 说明 | 示例 |
+|------|------|------|
+| `/key/0/` | 使用第 1 个 Key | `/key/0/v1/chat/completions` |
+| `/key/1-3/` | 从 index 1~3 中随机 | `/key/1-3/v1/chat/completions` |
+| `/key/2-/` | 从 index 2 到末尾随机 | `/key/2-/v1/chat/completions` |
+| `/key/-4/` | 从 index 0 到 4 随机 | `/key/-4/v1/chat/completions` |
 
-- `ENABLE_GLOBAL_ROUND_ROBIN`: Set to `true` to enable this feature. (Default: `false`)
+范围内的随机选择使用 `crypto.randomInt`（密码学安全随机数）。
 
-> [!IMPORTANT]
-> Enabling this feature requires a Cloudflare account that supports Durable Objects.
+## 使用示例
 
-### Local Development
-
-When running locally with `npm run dev`, Wrangler automatically simulates Durable Objects.
-
-### API Key Selection via Path Parameter
-
-You can explicitly select an API key or a range for rotation by adding `/key/{index|range}/` to the start of the URL path. This bypasses the default global round-robin logic.
-
-- **Single Key:** `/key/0/v1/chat/completions` (Selects the 1st key)
-- **Range:** `/key/1-3/v1/chat/completions` (Selects a random key from index 1 to 3)
-- **Unspecified End:** `/key/2-/v1/chat/completions` (Selects a random key from index 2 to the end)
-- **Unspecified Start:** `/key/-4/v1/chat/completions` (Selects a random key from index 0 to 4)
-
-Note: Random selection within a range is stateless and uses a cryptographically secure random number generator (`crypto.randomInt`).
-
-## Usage Example
-
-Send requests to your deployed Cloudflare Worker URL with the appropriate route and API key.
-
-### OpenAI-Compatible Endpoints
-
-These endpoints are designed to be compatible with the OpenAI API.
-
-#### cURL
+### OpenAI 兼容端点
 
 ```bash
-curl https://your-worker-url/v1/models \
-  -H "Authorization: Bearer $PROXY_API_KEY" \
-  -H "Content-Type: application/json"
-```
+# 列出模型
+curl https://your-server/v1/models \
+  -H "Authorization: Bearer $PROXY_API_KEY"
 
-```bash
-curl -X POST https://your-worker-url/v1/chat/completions \
+# Chat Completions
+curl -X POST https://your-server/v1/chat/completions \
   -H "Authorization: Bearer $PROXY_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "openai/gpt-4o",
-    "messages": [{"role": "user", "content": "Hello, world!"}]
+    "messages": [{"role": "user", "content": "Hello!"}]
   }'
 ```
 
 #### Python (OpenAI SDK)
 
-```Python
-from openai import OpenAI
-
-client = OpenAI(
-    api_key="PROXY_API_KEY",
-    base_url="https://your-worker-url"
-)
-models = client.models.list()
-for model in models.data:
-    print(model.id)
-```
-
 ```python
 from openai import OpenAI
 
 client = OpenAI(
-    api_key="PROXY_API_KEY",
-    base_url="https://your-worker-url"
-)
-response = client.chat.completions.create(
-    model: "google-ai-studio/gemini-2.5-pro",
-    messages: [{ "role": "user", "content": "Hello, world!" }],
+    api_key="your-proxy-api-key",
+    base_url="https://your-server"
 )
 
+response = client.chat.completions.create(
+    model="google-ai-studio/gemini-2.5-pro",
+    messages=[{"role": "user", "content": "Hello!"}],
+)
 print(response.choices[0].message.content)
 ```
 
-### Pass-through Endpoints
-
-Forward requests directly to the LLM provider's API using these endpoints.
-
-#### cURL
+### 透传端点
 
 ```bash
-curl -X POST https://your-worker-url/openai/chat/completions \
+# OpenAI 原始 API
+curl -X POST https://your-server/openai/chat/completions \
   -H "Authorization: Bearer $PROXY_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{
-    "model": "gpt-4o",
-    "messages": [{"role": "user", "content": "Hello, world!"}]
-  }'
+  -d '{"model": "gpt-4o", "messages": [{"role": "user", "content": "Hello!"}]}'
+
+# Google AI Studio 原始 API
+curl -X POST https://your-server/google-ai-studio/v1beta/models/gemini-2.5-pro:generateContent \
+  -H "Authorization: Bearer $PROXY_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"contents": [{"role": "user", "parts": [{"text": "Hello!"}]}]}'
 ```
+
+## 开发
 
 ```bash
-curl -X POST https://your-worker-url/google-ai-studio/v1beta/models/gemini-2.5-pro:generateContent \
-  -H "Authorization: Bearer $PROXY_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "contents": [{"role": "user", "parts": [{"text": "Hello, world!"}]}]
-  }'
+npm run dev          # 开发服务器（热重载）
+npm run test         # 运行测试
+npm run lint         # ESLint 检查
+npm run tsc          # TypeScript 类型检查
 ```
 
-## Documentation
+## 项目结构
 
-For detailed architectural and design information, please refer to the [Design Documentation](docs/design/overview.md).
+```
+src/
+├── index.ts              # 服务入口
+├── common/env.ts         # 环境变量（Zod 校验）
+├── routes/               # Vafast 路由定义
+├── middleware/            # 中间件（鉴权、错误处理、AI Gateway 等）
+├── requests/             # 请求处理器
+├── providers/            # LLM 厂商适配
+├── ai_gateway/           # Cloudflare AI Gateway 集成
+└── utils/                # 工具函数
+api/
+└── index.ts              # Vercel Serverless 入口
+```
 
-## Known Issues and Limitations
+## 已知限制
 
-This project is under active development and has the following known issues and limitations:
-
-- **Incomplete Provider Support:** Not all LLM providers are fully supported. Some providers may have limited feature support or may not be supported at all.
+- 部分 LLM 厂商功能支持不完整（Tool Use、多模态等）
+- Azure OpenAI、Vertex AI、Amazon Bedrock 暂未实现
