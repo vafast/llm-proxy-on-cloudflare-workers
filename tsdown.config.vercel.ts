@@ -1,7 +1,7 @@
 import { defineConfig } from "tsdown/config";
 
 export default defineConfig({
-  entry: { index: "api/index.ts" },
+  entry: { index: "src/vercel.ts" },
   format: ["esm"],
   outDir: "api",
   clean: false,
