@@ -75,4 +75,66 @@ describe("authenticate", () => {
 
     expect(await authenticate(request)).toBe(false);
   });
+
+  describe("多 PROXY_API_KEY 场景（多用户各自 key）", () => {
+    it("多个 key 应各自独立鉴权通过，互不混淆", async () => {
+      vi.mocked(Config.apiKeys).mockReturnValue([
+        "user-a-key-aaa",
+        "user-b-key-bbb",
+        "user-c-key-ccc",
+      ]);
+
+      const reqA = new Request("https://example.com", {
+        headers: { "x-api-key": "user-a-key-aaa" },
+      });
+      const reqB = new Request("https://example.com", {
+        headers: { "x-api-key": "user-b-key-bbb" },
+      });
+      const reqC = new Request("https://example.com", {
+        headers: { "x-api-key": "user-c-key-ccc" },
+      });
+
+      expect(await authenticate(reqA)).toBe(true);
+      expect(await authenticate(reqB)).toBe(true);
+      expect(await authenticate(reqC)).toBe(true);
+    });
+
+    it("用户 A 的 key 不能通过用户 B 的鉴权", async () => {
+      vi.mocked(Config.apiKeys).mockReturnValue([
+        "user-a-key-aaa",
+        "user-b-key-bbb",
+      ]);
+
+      const reqWithWrongKey = new Request("https://example.com", {
+        headers: { "x-api-key": "user-a-key-aaa" },
+      });
+      // 请求带的是 user-a 的 key，应在列表中，通过
+      expect(await authenticate(reqWithWrongKey)).toBe(true);
+
+      const reqWithInvalidKey = new Request("https://example.com", {
+        headers: { "x-api-key": "random-key-not-in-list" },
+      });
+      expect(await authenticate(reqWithInvalidKey)).toBe(false);
+    });
+
+    it("key 精确匹配，子串或相似 key 不应通过", async () => {
+      vi.mocked(Config.apiKeys).mockReturnValue(["exact-key-123"]);
+
+      expect(
+        await authenticate(
+          new Request("https://x", { headers: { "x-api-key": "exact-key-123" } }),
+        ),
+      ).toBe(true);
+      expect(
+        await authenticate(
+          new Request("https://x", { headers: { "x-api-key": "exact-key-12" } }),
+        ),
+      ).toBe(false);
+      expect(
+        await authenticate(
+          new Request("https://x", { headers: { "x-api-key": "exact-key-1234" } }),
+        ),
+      ).toBe(false);
+    });
+  });
 });
