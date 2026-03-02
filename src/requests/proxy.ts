@@ -24,6 +24,15 @@ export async function proxy(
     throw new NotFoundError();
   }
 
+  // 部分 provider 的 baseUrl 已包含 /v1，若 pathname 以 /v1/ 开头则去除以避免重复
+  let normalizedPathname = pathname;
+  if (pathname.startsWith("/v1/")) {
+    const base = providerInstance.baseUrl();
+    if (base.endsWith("/v1") || base.endsWith("/v1/")) {
+      normalizedPathname = pathname.slice(4);
+    }
+  }
+
   const apiKeyIndex =
     contextApiKeyIndex !== undefined
       ? Secrets.resolveApiKeyIndex(
@@ -40,7 +49,7 @@ export async function proxy(
       : null;
 
   return providerInstance.fetch(
-    pathname,
+    normalizedPathname,
     {
       method: request.method,
       body: forwardBody,
