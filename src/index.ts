@@ -1,25 +1,30 @@
 /**
  * LLM Proxy 入口
  *
- * 使用 Vafast Server + serve，与 ai-server 架构一致
+ * 架构与 ai-server 一致：
+ * - 根路由（/ping）无鉴权，供负载均衡器 / Railway healthcheck 使用
+ * - 业务路由通过路由组中间件挂载 auth + aiGateway
+ * - server.use() 只注册真正全局的中间件（cors、requestId、error）
  */
-import { Server, serve } from "vafast";
+import { Server, serve, defineRoute, defineRoutes } from "vafast";
 import { cors } from "@vafast/cors";
 import { requestId } from "@vafast/request-id";
 import { errorMiddleware } from "./middleware/error";
-import { authMiddleware } from "./middleware/auth";
-import { defaultAiGatewayMiddleware } from "./middleware/extractAiGateway";
 import { createAllRoutes } from "./routes";
 import { env } from "./common/env";
 
-const routes = createAllRoutes();
-const server = new Server(routes);
+// 根路由（无鉴权）- 负载均衡器 / Railway healthcheck
+const rootRoutes = defineRoutes([
+  defineRoute({ method: "GET", path: "/ping", handler: () => "Pong" }),
+  defineRoute({ method: "HEAD", path: "/ping", handler: () => null }),
+]);
+
+const businessRoutes = createAllRoutes();
+const server = new Server([...rootRoutes, ...businessRoutes]);
 
 server.use(cors({ origin: true }));
 server.use(requestId());
 server.use(errorMiddleware);
-server.use(authMiddleware);
-server.use(defaultAiGatewayMiddleware);
 
 serve(
   {
