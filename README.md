@@ -119,7 +119,7 @@ curl -X POST https://your-domain/v1/chat/completions \
 
 | 变量 | 说明 |
 |------|------|
-| `PROXY_API_KEY` | 代理鉴权密钥（非 DEV 模式下必填） |
+| `PROXY_API_KEY` | 代理鉴权密钥（无 DB 时必填，有 DB 时可与 Admin 创建的 key 二选一） |
 
 ### Admin Key 管理（可选）
 
@@ -129,15 +129,7 @@ curl -X POST https://your-domain/v1/chat/completions \
 | `DATABASE_URL` | PostgreSQL 连接串（Railway 部署用私网） |
 | `DATABASE_PUBLIC_URL` | PostgreSQL 公网连接串（本地开发用） |
 
-配置后可通过 Admin API 动态创建 Key，创建的 Key 与 `PROXY_API_KEY` 等效用于代理鉴权。无 DB 时回退到 `PROXY_API_KEY`。
-
-### Cloudflare AI Gateway（可选）
-
-| 变量 | 说明 |
-|------|------|
-| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare 账户 ID |
-| `AI_GATEWAY_NAME` | AI Gateway 名称 |
-| `CF_AIG_TOKEN` | AI Gateway 认证 Token |
+配置 DB 后可通过 Admin API 动态创建 Key，与 `PROXY_API_KEY` 二选一用于鉴权。无 DB 时需配置 `PROXY_API_KEY`。
 
 ### 全局 Key 轮询（可选）
 

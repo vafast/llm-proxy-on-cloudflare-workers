@@ -10,12 +10,12 @@ describe("authenticate", () => {
     vi.mocked(Config.apiKeys).mockReturnValue(["valid-key"]);
   });
 
-  // 环境未配置 API key 时
-  it("should return true when no PROXY_API_KEY is set", async () => {
+  // 未配置 PROXY_API_KEY 且无有效 key 时拒绝（统一行为）
+  it("should return false when no PROXY_API_KEY is set and no valid key", async () => {
     vi.mocked(Config.apiKeys).mockReturnValue(undefined);
     const request = new Request("https://example.com");
 
-    expect(await authenticate(request)).toBe(true);
+    expect(await authenticate(request)).toBe(false);
   });
 
   // Authorization 头鉴权成功

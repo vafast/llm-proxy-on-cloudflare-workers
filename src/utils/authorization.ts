@@ -29,12 +29,9 @@ function extractApiKey(request: Request): string | null {
 
 /**
  * 异步鉴权：优先校验 keys 表，无 DB 或 keys 表无匹配时回退到 PROXY_API_KEY
- * 未配置 PROXY_API_KEY 且无 DB 时等同于鉴权关闭（接受所有请求）
+ * 需配置 PROXY_API_KEY 或 DB keys 表，否则拒绝请求（DEV 与非 DEV 行为一致）
  */
 export async function authenticate(request: Request): Promise<boolean> {
-  const envKeys = Config.apiKeys();
-  if (!envKeys) return true;
-
   const apiKey = extractApiKey(request);
   if (!apiKey) return false;
 
@@ -45,5 +42,10 @@ export async function authenticate(request: Request): Promise<boolean> {
     // DB 不可用或 keys 表未初始化时回退到 env
   }
 
-  return envKeys.includes(apiKey);
+  const envKeys = Config.apiKeys();
+  if (envKeys && envKeys.length > 0) {
+    return envKeys.includes(apiKey);
+  }
+
+  return false;
 }
