@@ -11,7 +11,7 @@ import { redisConfig } from "../common/env";
 
 function handleDbError(e: unknown): never {
   if (e instanceof Error && e.message.includes("未配置")) {
-    throw err.badRequest("数据库未配置，请设置 DATABASE_URL 或 DATABASE_PUBLIC_URL");
+    throw err.badRequest("数据库未配置，请设置 DATABASE_URL");
   }
   throw e;
 }
@@ -83,7 +83,7 @@ const adminRouteConfig = [
         path: "/redis-ping",
         handler: async () => {
           if (!redisConfig.url) {
-            throw err("Redis 未配置（REDIS_URL 或 REDIS_PUBLIC_URL）", 503);
+            throw err("Redis 未配置（REDIS_URL）", 503);
           }
           const i0 = await getNextIndex("redis-ping-test", 2);
           const i1 = await getNextIndex("redis-ping-test", 2);

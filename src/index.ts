@@ -19,9 +19,7 @@ import { Config } from "./utils/config";
 function warnIfNoAuthConfig(): void {
   if (env.nodeEnv === "test") return;
 
-  const hasDb = !!(
-    process.env.DATABASE_URL || process.env.DATABASE_PUBLIC_URL
-  );
+  const hasDb = !!process.env.DATABASE_URL;
   const apiKeys = Config.apiKeys();
   const hasEnvKeys =
     apiKeys && apiKeys.length > 0 && apiKeys.some((k) => k?.trim?.());

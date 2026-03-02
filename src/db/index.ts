@@ -1,12 +1,11 @@
 /**
  * PostgreSQL 连接
  *
- * 优先 DATABASE_URL（Railway 私网），否则 DATABASE_PUBLIC_URL（本地开发）
+ * Railway 等会注入对应环境的连接串（部署用私网，本地开发用公网）
  */
 import pg from "pg";
 
-const connectionString =
-  process.env.DATABASE_URL || process.env.DATABASE_PUBLIC_URL;
+const connectionString = process.env.DATABASE_URL;
 
 let pool: pg.Pool | null = null;
 
@@ -27,7 +26,7 @@ export async function query<T extends pg.QueryResultRow = pg.QueryResultRow>(
   params?: unknown[],
 ): Promise<pg.QueryResult<T>> {
   const p = getPool();
-  if (!p) throw new Error("DATABASE_URL 或 DATABASE_PUBLIC_URL 未配置");
+  if (!p) throw new Error("DATABASE_URL 未配置");
   return p.query<T>(text, params);
 }
 

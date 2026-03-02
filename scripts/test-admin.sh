@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Admin 接口测试脚本
-# 需先配置 .env.development: ADMIN_KEY, DATABASE_PUBLIC_URL
-# Redis 测试需: REDIS_PUBLIC_URL（或 REDIS_URL）
+# 需先配置 .env.development: ADMIN_KEY, DATABASE_URL
+# Redis 测试需: REDIS_URL
 # 启动服务: npm run dev
 
 set -e

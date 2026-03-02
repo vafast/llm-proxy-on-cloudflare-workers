@@ -128,8 +128,7 @@ curl -X POST https://your-domain/v1/chat/completions \
 | 变量 | 说明 |
 |------|------|
 | `ADMIN_KEY` | 管理员鉴权密钥，用于 `/admin/keys` 接口 |
-| `DATABASE_URL` | PostgreSQL 连接串（Railway 部署用私网） |
-| `DATABASE_PUBLIC_URL` | PostgreSQL 公网连接串（本地开发用） |
+| `DATABASE_URL` | PostgreSQL 连接串（Railway 部署时自动注入；本地开发连 Railway 时手动填入公网连接串） |
 
 配置 DB 后可通过 Admin API 动态创建 Key，与 `PROXY_API_KEY` 二选一用于鉴权。无 DB 时需配置 `PROXY_API_KEY`。
 
@@ -140,8 +139,7 @@ curl -X POST https://your-domain/v1/chat/completions \
 | 变量 | 说明 |
 |------|------|
 | `ENABLE_GLOBAL_ROUND_ROBIN` | 设为 `true` 开启全局轮询（默认 `false`） |
-| `REDIS_URL` | Redis 连接串（redis://...，内网用） |
-| `REDIS_PUBLIC_URL` | Redis 公网连接串（本地测 Railway 等用） |
+| `REDIS_URL` | Redis 连接串（Railway 部署时自动注入；本地开发连 Railway 时手动填入） |
 
 未配置 Redis 时自动使用内存轮询（适用于单进程）。
 
@@ -183,7 +181,7 @@ curl -X POST https://your-domain/v1/chat/completions \
 
 ## Admin Key 管理
 
-需配置 `ADMIN_KEY` 和 `DATABASE_URL`（或 `DATABASE_PUBLIC_URL`）。**首次使用需先创建 key**，创建的 key 与 `PROXY_API_KEY` 等效，可用于所有代理接口。
+需配置 `ADMIN_KEY` 和 `DATABASE_URL`。**首次使用需先创建 key**，创建的 key 与 `PROXY_API_KEY` 等效，可用于所有代理接口。
 
 | 方法 | 路径 | 说明 |
 |------|------|------|

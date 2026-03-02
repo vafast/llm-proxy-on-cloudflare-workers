@@ -37,7 +37,7 @@ export async function validateKey(plainKey: string): Promise<boolean> {
 
 function ensurePool(): void {
   if (!getPool()) {
-    throw new Error("DATABASE_URL 或 DATABASE_PUBLIC_URL 未配置");
+    throw new Error("DATABASE_URL 未配置");
   }
 }
 

@@ -15,9 +15,8 @@ const parsed = cleanEnv(process.env, {
   // 代理鉴权
   PROXY_API_KEY: str({ default: "" }),
 
-  // Redis（Key 轮询，可选。支持 redis:// URL，优先 REDIS_PUBLIC_URL 用于公网）
+  // Redis（Key 轮询，可选。Railway 等会注入对应环境的连接串）
   REDIS_URL: str({ default: "" }),
-  REDIS_PUBLIC_URL: str({ default: "" }),
 
   // Provider API Keys
   OPENAI_API_KEY: str({ default: "" }),
@@ -60,9 +59,7 @@ export const proxyConfig = {
 } as const;
 
 export const redisConfig = {
-  /** 优先公网 URL（本地测试 Railway 等），否则用 REDIS_URL */
-  url:
-    parsed.REDIS_PUBLIC_URL || parsed.REDIS_URL || undefined,
+  url: parsed.REDIS_URL || undefined,
 } as const;
 
 export const providerKeys = {
