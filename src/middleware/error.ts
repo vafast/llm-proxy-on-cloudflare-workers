@@ -1,7 +1,7 @@
-import { Middleware } from "../middleware";
+import type { Middleware } from "vafast";
 import { AppError } from "../utils/error";
 
-export const errorMiddleware: Middleware = async (context, next) => {
+export const errorMiddleware: Middleware = async (req, next) => {
   try {
     return await next();
   } catch (err) {
@@ -20,16 +20,11 @@ export const errorMiddleware: Middleware = async (context, next) => {
 
     return new Response(
       JSON.stringify({
-        error: {
-          message,
-          status,
-        },
+        error: { message, status },
       }),
       {
         status,
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
       },
     );
   }

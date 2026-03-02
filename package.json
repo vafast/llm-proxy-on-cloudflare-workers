@@ -1,54 +1,36 @@
 {
-  "name": "llm-proxy-on-cloudflare-workers",
-  "description": "A serverless proxy on Cloudflare Workers for multiple LLM APIs with unified authentication and key rotation.",
-  "author": "blue.pen5805",
-  "version": "0.2.1",
-  "private": true,
+  "name": "llm-proxy",
+  "description": "通用 LLM API 代理，支持多厂商统一鉴权与 Key 轮询。可部署至 Node.js、Vercel、Docker。",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
-    "deploy": "wrangler deploy",
-    "dev": "ts-node scripts/with-secrets.ts --env develop -- wrangler dev --env-file .dev.vars.develop",
-    "cf-typegen": "ts-node scripts/with-secrets.ts --env example -- wrangler types --env-file .dev.vars.example",
-    "cf:login": "wrangler login",
-    "cf:logout": "wrangler logout",
+    "dev": "PORT=8787 dotenvx run -f .env.development -- tsx watch src/index.ts",
+    "build": "tsdown && cp .env.production dist/.env 2>/dev/null || true",
+    "start": "PORT=8787 dotenvx run -f ./dist/.env -- node ./dist/index.js",
+    "tsc": "tsc --noEmit",
     "test": "vitest run",
     "test-watch": "vitest watch",
-    "tsc": "tsc --noEmit",
-    "prettier": "prettier --write .",
-    "prettier-ci": "prettier --check .",
     "lint": "eslint 'src/**/*.ts'",
-    "lint:fix": "eslint --fix 'src/**/*.ts'",
-    "secrets:deploy": "ts-node scripts/deploy-secrets.ts",
-    "secrets:create": "ts-node scripts/create-config.ts"
+    "lint:fix": "eslint --fix 'src/**/*.ts'"
+  },
+  "dependencies": {
+    "@dotenvx/dotenvx": "^1.41.0",
+    "@upstash/redis": "^1.34.3",
+    "@vafast/cors": "^0.1.3",
+    "@vafast/request-id": "^0.1.1",
+    "vafast": "^0.7.4",
+    "zod": "^4.3.5"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.12.18",
-    "@trivago/prettier-plugin-sort-imports": "^6.0.2",
     "@types/node": "^25.3.2",
     "@typescript-eslint/eslint-plugin": "^8.56.1",
     "@typescript-eslint/parser": "^8.56.1",
     "eslint": "^9.39.2",
-    "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-prettier": "^5.5.5",
-    "prettier": "^3.8.1",
-    "ts-node": "^10.9.2",
+    "tsdown": "^0.9.8",
+    "tsx": "^4.7.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.56.1",
     "vite": "^7.3.1",
-    "vitest": "^3.2.4",
-    "wrangler": "^4.69.0"
-  },
-  "cloudflare": {
-    "bindings": {
-      "PROXY_API_KEY": {
-        "description": "API key to authenticate requests to the LLM Proxy server. (Any string can be used)"
-      },
-      "OPENAI_API_KEY": {
-        "description": "Your OpenAI API key."
-      },
-      "GEMINI_API_KEY": {
-        "description": "Your Google AI Studio (Gemini) API key."
-      }
-    }
+    "vitest": "^3.2.4"
   }
 }

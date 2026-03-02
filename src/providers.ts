@@ -14,15 +14,11 @@ import { OpenRouter } from "./providers/openrouter";
 import { PerplexityAi } from "./providers/perplexity-ai";
 import { ProviderBase } from "./providers/provider";
 import { Replicate } from "./providers/replicate";
-import { WorkersAi } from "./providers/workers_ai";
 import { Config } from "./utils/config";
 
 export const Providers: {
   [providerName: string]: typeof ProviderBase;
 } = {
-  // --- Cloudflare AI Gateway Supported Providers
-  "workers-ai": WorkersAi,
-  // "aws-bedrock": {},
   anthropic: Anthropic,
   // "azure-openai": {},
   // "cartesia": {},

@@ -1,70 +1,60 @@
 import { CloudflareAIGateway } from "../ai_gateway";
-import { MiddlewareContext } from "../middleware";
 import { getProvider } from "../providers";
 import { Config } from "../utils/config";
 import { Environments } from "../utils/environments";
-import { fetch2, safeJsonParse } from "../utils/helpers";
+import { fetch2 } from "../utils/helpers";
 import { Secrets } from "../utils/secrets";
 
-export async function chatCompletions(
-  context: MiddlewareContext,
-  aiGateway: CloudflareAIGateway | undefined = undefined,
-) {
-  const { request, apiKeyIndex: contextApiKeyIndex } = context;
-  // Remove Authorization header to prevent it from being sent to the provider
+/**
+ * @param request - 原始请求（用于读取 headers 和扩展属性）
+ * @param body - Vafast 预解析的 body
+ */
+export async function chatCompletions(request: Request, body: unknown) {
+  const aiGateway = request.aiGateway;
+  const contextApiKeyIndex = request.apiKeyIndex;
+
   const headers = new Headers(request.headers);
   headers.delete("Authorization");
 
-  // Validate Request Data Structure
-  const data = safeJsonParse(await request.text());
-  if (typeof data === "string") {
-    return new Response(
-      JSON.stringify({
-        error: "Invalid request.",
-      }),
-      { status: 400, headers: { "Content-Type": "application/json" } },
-    );
+  if (!body || typeof body !== "object") {
+    return { data: { error: "Invalid request." }, status: 400 };
   }
 
-  // Split model into provider and model name
-  const [providerName, ...modelParts] = (
-    data["model"] === "default" ? Config.defaultModel() : data["model"]
-  ).split("/") as [string, string];
+  const data = body as Record<string, unknown>;
+
+  const modelStr =
+    data["model"] === "default"
+      ? Config.defaultModel() || ""
+      : String(data["model"] || "");
+  const [providerName, ...modelParts] = modelStr.split("/") as [
+    string,
+    string,
+  ];
   const model = modelParts.join("/");
 
-  // Validate provider name
   const provider = getProvider(providerName, Environments.all());
   if (!provider) {
-    return new Response(
-      JSON.stringify({
-        error: "Invalid provider.",
-      }),
-      { status: 400, headers: { "Content-Type": "application/json" } },
-    );
+    return { data: { error: "Invalid provider." }, status: 400 };
   }
 
-  // Get API key apiKeyIndex
   const apiKeyIndex =
     contextApiKeyIndex !== undefined
       ? Secrets.resolveApiKeyIndex(
-          contextApiKeyIndex,
-          provider.getApiKeys().length,
-        )
+        contextApiKeyIndex,
+        provider.getApiKeys().length,
+      )
       : await provider.getNextApiKeyIndex();
 
-  // Generate chat completions request
-  const [requestInfo, requestInit] = await provider.buildChatCompletionsRequest(
-    {
+  const [requestInfo, requestInit] =
+    await provider.buildChatCompletionsRequest({
       body: JSON.stringify({
         ...data,
         model,
       }),
       headers,
       apiKeyIndex,
-    },
-  );
+    });
 
-  // If AI Gateway is enabled and the provider supports it, use AI Gateway
   if (
     aiGateway &&
     CloudflareAIGateway.isSupportedProvider(providerName, true)
@@ -81,6 +71,5 @@ export async function chatCompletions(
     );
   }
 
-  // Request to the provider endpoint
   return provider.fetch(requestInfo, requestInit);
 }

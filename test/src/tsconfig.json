@@ -3,10 +3,9 @@
   "compilerOptions": {
     "baseUrl": "../../",
     "paths": {
-      "~/src/*": ["src/*"]
-    },
-    "types": ["@cloudflare/vitest-pool-workers"]
+      "~/*": ["src/*"]
+    }
   },
-  "include": ["./**/*.ts", "../worker-configuration.d.ts"],
+  "include": ["./**/*.ts"],
   "exclude": []
 }

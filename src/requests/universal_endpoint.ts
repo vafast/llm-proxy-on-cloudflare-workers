@@ -18,11 +18,15 @@ type UniversalEndpointRequest = {
   };
 };
 
+/**
+ * @param body - Vafast 预解析的 body（避免重复消耗 ReadableStream）
+ */
 export async function universalEndpoint(
   request: Request,
   aiGateway: CloudflareAIGateway,
+  body: unknown,
 ) {
-  const items: UniversalEndpointRequest[] = await request.json();
+  const items = body as UniversalEndpointRequest[];
 
   const mappedItems: CloudflareAIGatewayUniversalEndpointData =
     await Promise.all(
@@ -41,8 +45,11 @@ export async function universalEndpoint(
             item.endpoint || providerClass.chatCompletionPath.replace("/", "");
           const apiKeyName = providerClass.apiKeyName as keyof Env;
           const apiKeyIndex = await Secrets.getNext(apiKeyName);
-          const headers = {
-            ...(await providerClass.headers(apiKeyIndex)),
+          const providerHeaders = await providerClass.headers(apiKeyIndex);
+          const headers: Record<string, string> = {
+            ...(providerHeaders instanceof Headers
+              ? Object.fromEntries(providerHeaders.entries())
+              : (providerHeaders as Record<string, string>)),
             ...item.headers,
           };
           const query = item.query;

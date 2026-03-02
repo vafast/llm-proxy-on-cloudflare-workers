@@ -1,5 +1,4 @@
 import { CloudflareAIGateway } from "../ai_gateway";
-import { MiddlewareContext } from "../middleware";
 import { getAllProviders } from "../providers";
 import { OpenAIModelsListResponseBody } from "../providers/openai/types";
 import { ProviderNotSupportedError } from "../providers/provider";
@@ -7,19 +6,16 @@ import { Environments } from "../utils/environments";
 import { fetch2, withTimeout } from "../utils/helpers";
 import { Secrets } from "../utils/secrets";
 
-// Timeout for individual provider model fetch operations (milliseconds)
 const PROVIDER_FETCH_TIMEOUT_MS = 5000;
 
-export async function models(
-  context: MiddlewareContext,
-  aiGateway: CloudflareAIGateway | undefined = undefined,
-) {
-  const { apiKeyIndex: contextApiKeyIndex } = context;
+export async function models(request: Request) {
+  const aiGateway = request.aiGateway;
+  const contextApiKeyIndex = request.apiKeyIndex;
+
   const env = Environments.all();
   const allProviders = getAllProviders(env);
   const requests = Object.entries(allProviders).map(
     async ([providerName, providerInstance]) => {
-      // Return empty list if the provider is not available
       if (providerInstance.available() === false) {
         return {
           object: "list",
@@ -27,15 +23,11 @@ export async function models(
         } as OpenAIModelsListResponseBody;
       }
 
-      // Generate models request
-
-      // Check for static models
       const staticModels = providerInstance.staticModels();
       if (staticModels) {
         return staticModels;
       }
 
-      // Use the provided API key index if available, otherwise default to 0
       const apiKeyIndex =
         contextApiKeyIndex !== undefined
           ? Secrets.resolveApiKeyIndex(
@@ -48,7 +40,6 @@ export async function models(
 
       let models: OpenAIModelsListResponseBody;
       if (aiGateway && CloudflareAIGateway.isSupportedProvider(providerName)) {
-        // Request through AI Gateway with timeout
         const abortController = new AbortController();
         const [gatewayUrl, gatewayInit] =
           aiGateway.buildProviderEndpointRequest({
@@ -74,11 +65,9 @@ export async function models(
             providerName,
           );
         } catch (error) {
-          // Re-throw the error to be handled by Promise.allSettled
           throw error;
         }
       } else {
-        // Direct request to provider endpoint with timeout
         const abortController = new AbortController();
         const fetchPromise = providerInstance
           .fetch(
@@ -99,7 +88,6 @@ export async function models(
             providerName,
           );
         } catch (error) {
-          // Re-throw the error to be handled by Promise.allSettled
           throw error;
         }
       }
@@ -109,7 +97,7 @@ export async function models(
   );
 
   const responses = await Promise.allSettled(requests);
-  const models = responses.map((response, index) => {
+  const modelsList = responses.map((response, index) => {
     const provider = Object.keys(allProviders)[index];
 
     if (response.status === "rejected") {
@@ -142,15 +130,8 @@ export async function models(
     }));
   });
 
-  return new Response(
-    JSON.stringify({
-      data: models.flat(),
-      object: "list",
-    }),
-    {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    },
-  );
+  return {
+    data: modelsList.flat(),
+    object: "list",
+  };
 }

@@ -27,11 +27,12 @@ export function authenticate(request: Request): boolean {
 
   let apiKey: string | null = null;
 
-  const authorizationKey =
-    AUTHORIZATION_KEYS.find((key) => {
-      return Boolean(request.headers.get(key));
-    }) || "";
-  const authorizationValue = request.headers.get(authorizationKey);
+  const authorizationKey = AUTHORIZATION_KEYS.find((key) =>
+    Boolean(request.headers.get(key)),
+  );
+  const authorizationValue = authorizationKey
+    ? request.headers.get(authorizationKey)
+    : null;
 
   if (authorizationKey && authorizationValue) {
     apiKey = authorizationValue.split(/\s/)[1] || authorizationValue;

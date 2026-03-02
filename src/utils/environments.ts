@@ -1,39 +1,15 @@
 import * as process from "node:process";
 
 /**
- * Utility class for accessing and manipulating environment variables
- * in a type-safe way with parsing capabilities.
- *
- * @class Environments
+ * 环境变量访问工具
+ * Node.js 下使用 process.env
  */
 export class Environments {
-  private static currentEnv: Env | undefined;
-
   /**
-   * Sets the current environment object.
-   *
-   * @param {Env} env - The environment object from Cloudflare Workers
-   */
-  static setEnv(env: Env): void {
-    this.currentEnv = env;
-  }
-
-  /**
-   * Gets the current environment object.
-   *
-   * @returns {Env | undefined} The current environment object
-   */
-  static getEnv(): Env | undefined {
-    return this.currentEnv;
-  }
-
-  /**
-   * Returns all environment variables cast as the Env type.
-   *
-   * @returns {Env} All environment variables
+   * 返回所有环境变量（兼容 Env 类型）
    */
   static all(): Env {
-    return (this.currentEnv || process.env) as unknown as Env;
+    return process.env as unknown as Env;
   }
 
   /**

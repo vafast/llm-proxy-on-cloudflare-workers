@@ -93,14 +93,11 @@ export class Secrets {
       return 0;
     }
 
-    const env = Environments.getEnv();
-    if (env && env.KEY_ROTATION_MANAGER && Config.isGlobalRoundRobinEnabled()) {
-      const id = env.KEY_ROTATION_MANAGER.idFromName(identifier);
-      const obj = env.KEY_ROTATION_MANAGER.get(id);
-      return await obj.getNextIndex(identifier, length);
+    if (Config.isGlobalRoundRobinEnabled()) {
+      const { getNextIndex } = await import("./key_rotation");
+      return getNextIndex(identifier, length);
     }
 
-    // Default to random if global round-robin is not enabled
     return randomInt(length);
   }
 

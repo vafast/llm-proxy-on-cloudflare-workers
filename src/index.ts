@@ -1,35 +1,35 @@
-import { compose, MiddlewareContext } from "./middleware";
-import { aiGatewayMiddleware } from "./middlewares/ai_gateway";
-import { apiKeyPathMiddleware } from "./middlewares/api_key_path";
-import { authMiddleware } from "./middlewares/auth";
-import { corsMiddleware } from "./middlewares/cors";
-import { errorMiddleware } from "./middlewares/error";
-import { requestMiddleware } from "./middlewares/request";
-import { routerMiddleware } from "./middlewares/router";
-// Cloudflare Durable Objects
-import { KeyRotationManager } from "./utils/key_rotation_manager";
+/**
+ * LLM Proxy 入口
+ *
+ * 使用 Vafast Server + serve，与 ai-server 架构一致
+ */
+import { Server, serve } from "vafast";
+import { cors } from "@vafast/cors";
+import { requestId } from "@vafast/request-id";
+import { errorMiddleware } from "./middleware/error";
+import { authMiddleware } from "./middleware/auth";
+import { defaultAiGatewayMiddleware } from "./middleware/extractAiGateway";
+import { createAllRoutes } from "./routes";
+import { env } from "./common/env";
 
-export { KeyRotationManager };
+const routes = createAllRoutes();
+const server = new Server(routes);
 
-const middlewareChain = compose([
-  errorMiddleware,
-  requestMiddleware,
-  corsMiddleware,
-  apiKeyPathMiddleware,
-  authMiddleware,
-  aiGatewayMiddleware,
-  routerMiddleware,
-]);
+server.use(cors({ origin: true }));
+server.use(requestId());
+server.use(errorMiddleware);
+server.use(authMiddleware);
+server.use(defaultAiGatewayMiddleware);
 
-export default {
-  async fetch(request, env, ctx): Promise<Response> {
-    const context: MiddlewareContext = {
-      request,
-      env,
-      ctx,
-      pathname: "",
-    };
-
-    return await middlewareChain(context);
+serve(
+  {
+    fetch: server.fetch,
+    port: env.port,
+    hostname: "0.0.0.0",
+    gracefulShutdown: true,
+    trustProxy: true,
   },
-} satisfies ExportedHandler<Env>;
+  () => {
+    console.log(`LLM Proxy 已启动: http://localhost:${env.port}`);
+  },
+);

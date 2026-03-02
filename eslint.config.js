@@ -1,4 +1,3 @@
-import prettierRecommended from "eslint-plugin-prettier/recommended";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
@@ -15,7 +14,6 @@ export default [
     },
   },
   ...tseslint.configs.recommended,
-  prettierRecommended,
   {
     rules: {
       "@typescript-eslint/no-explicit-any": "off",

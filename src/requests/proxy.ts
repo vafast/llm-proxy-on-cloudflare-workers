@@ -1,19 +1,25 @@
 import { CloudflareAIGateway } from "../ai_gateway";
-import { MiddlewareContext } from "../middleware";
 import { getProvider } from "../providers";
 import { Environments } from "../utils/environments";
 import { NotFoundError } from "../utils/error";
 import { fetch2 } from "../utils/helpers";
 import { Secrets } from "../utils/secrets";
 
+/**
+ * @param request - 原始请求
+ * @param providerName - provider 名称
+ * @param pathname - 目标路径
+ * @param body - Vafast 预解析的 body（避免重复消耗 ReadableStream）
+ */
 export async function proxy(
-  context: MiddlewareContext,
+  request: Request,
   providerName: string,
   pathname: string,
-  aiGateway: CloudflareAIGateway | undefined = undefined,
+  body?: unknown,
 ) {
-  const { apiKeyIndex: contextApiKeyIndex } = context;
-  const { request } = context;
+  const aiGateway = request.aiGateway;
+  const contextApiKeyIndex = request.apiKeyIndex;
+
   const env = Environments.all();
   const providerInstance = getProvider(providerName, env);
 
@@ -29,28 +35,33 @@ export async function proxy(
         )
       : await providerInstance.getNextApiKeyIndex();
 
-  // Handle AI Gateway requests
+  const forwardBody =
+    body != null
+      ? typeof body === "string"
+        ? body
+        : JSON.stringify(body)
+      : null;
+
   if (aiGateway && CloudflareAIGateway.isSupportedProvider(providerName)) {
     return fetch2(
       ...aiGateway.buildProviderEndpointRequest({
         provider: providerName,
         method: request.method,
         path: pathname,
-        body: request.body,
+        body: forwardBody,
         headers: {
           ...(await providerInstance.headers(apiKeyIndex)),
-          ...request.headers,
+          ...Object.fromEntries(request.headers.entries()),
         },
       }),
     );
   }
 
-  // Send request to the provider directly
   return providerInstance.fetch(
     pathname,
     {
       method: request.method,
-      body: request.body,
+      body: forwardBody,
       headers: request.headers,
     },
     apiKeyIndex,

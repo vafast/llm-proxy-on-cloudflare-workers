@@ -133,14 +133,8 @@ export async function status(aiGateway?: CloudflareAIGateway) {
     };
   }
 
-  const responseBody = {
+  return {
     config,
     providers: providersStatus,
   };
-
-  return new Response(JSON.stringify(responseBody, null, 2), {
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
 }
