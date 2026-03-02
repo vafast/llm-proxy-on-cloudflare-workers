@@ -51,15 +51,13 @@ describe("models", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Clear Providers object
     Object.keys(Providers).forEach((key) => {
       delete Providers[key];
     });
 
-    // Provide withTimeout implementation to the mocked helpers module
     if (helpers.withTimeout !== undefined) {
       vi.mocked(helpers.withTimeout).mockImplementation(
-        async (promise: Promise<any>, abortController: AbortController) => {
+        async (promise: Promise<any>, _abortController: AbortController) => {
           return promise;
         },
       );
@@ -92,7 +90,6 @@ describe("models", () => {
       return ProviderClass ? new (ProviderClass as any)() : undefined;
     });
 
-    // Set up default mock providers in a specific order
     Providers.openai = vi.fn().mockReturnValue(mockProviderClass);
     Providers.anthropic = vi.fn().mockReturnValue(mockProviderClass);
 
@@ -121,13 +118,10 @@ describe("models", () => {
   });
 
   it("should return models from all available providers", async () => {
-    const response = await models({} as any);
+    // models() 现在返回普通对象，而非 Response
+    const result = await models({} as any);
 
-    expect(response).toBeInstanceOf(Response);
-    expect(response.headers.get("Content-Type")).toBe("application/json");
-
-    const body = (await response.json()) as ModelsResponse;
-    expect(body).toEqual({
+    expect(result).toEqual({
       object: "list",
       data: [
         {
@@ -153,7 +147,6 @@ describe("models", () => {
       available: vi.fn().mockReturnValue(false),
     };
 
-    // Clear and reset providers
     Object.keys(Providers).forEach((key) => {
       delete Providers[key];
     });
@@ -161,11 +154,10 @@ describe("models", () => {
     Providers.openai = vi.fn().mockReturnValue(mockProviderClass);
     Providers.unavailable = vi.fn().mockReturnValue(unavailableProviderClass);
 
-    const response = await models({} as any);
-    const body = (await response.json()) as ModelsResponse;
+    const result = await models({} as any);
 
-    expect(body.data).toHaveLength(1);
-    expect(body.data[0].id).toBe("openai/gpt-4");
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0].id).toBe("openai/gpt-4");
   });
 
   it("should use AI Gateway when available and provider supported", async () => {
@@ -174,7 +166,8 @@ describe("models", () => {
       { method: "GET", headers: {} },
     ]);
 
-    await models({} as any, mockAIGateway as any);
+    // aiGateway 通过 request.aiGateway 传入
+    await models({ aiGateway: mockAIGateway } as any);
 
     expect(CloudflareAIGateway.isSupportedProvider).toHaveBeenCalledWith(
       "openai",
@@ -194,7 +187,6 @@ describe("models", () => {
       fetch: vi.fn().mockRejectedValue(new Error("Network error")),
     };
 
-    // Clear and reset providers
     Object.keys(Providers).forEach((key) => {
       delete Providers[key];
     });
@@ -204,11 +196,10 @@ describe("models", () => {
 
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    const response = await models({} as any);
-    const body = (await response.json()) as ModelsResponse;
+    const result = await models({} as any);
 
-    expect(body.data).toHaveLength(1);
-    expect(body.data[0].id).toBe("openai/gpt-4");
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0].id).toBe("openai/gpt-4");
     expect(consoleSpy).toHaveBeenCalledWith(
       "Error fetching models for provider error:",
       expect.any(Error),
@@ -225,7 +216,6 @@ describe("models", () => {
         .mockRejectedValue(new ProviderNotSupportedError("Not supported")),
     };
 
-    // Clear and reset providers
     Object.keys(Providers).forEach((key) => {
       delete Providers[key];
     });
@@ -235,11 +225,10 @@ describe("models", () => {
 
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    const response = await models({} as any);
-    const body = (await response.json()) as ModelsResponse;
+    const result = await models({} as any);
 
-    expect(body.data).toHaveLength(1);
-    expect(body.data[0].id).toBe("openai/gpt-4");
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0].id).toBe("openai/gpt-4");
     expect(consoleSpy).not.toHaveBeenCalled();
 
     consoleSpy.mockRestore();
@@ -256,7 +245,6 @@ describe("models", () => {
       modelsToOpenAIFormat: vi.fn().mockReturnValue(null),
     };
 
-    // Clear and reset providers
     Object.keys(Providers).forEach((key) => {
       delete Providers[key];
     });
@@ -266,11 +254,10 @@ describe("models", () => {
 
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    const response = await models({} as any);
-    const body = (await response.json()) as ModelsResponse;
+    const result = await models({} as any);
 
-    expect(body.data).toHaveLength(1);
-    expect(body.data[0].id).toBe("openai/gpt-4");
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0].id).toBe("openai/gpt-4");
     expect(consoleSpy).toHaveBeenCalledWith(
       "Invalid response for provider invalid:",
       null,
@@ -290,7 +277,6 @@ describe("models", () => {
       modelsToOpenAIFormat: vi.fn().mockReturnValue({ object: "list" }),
     };
 
-    // Clear and reset providers
     Object.keys(Providers).forEach((key) => {
       delete Providers[key];
     });
@@ -300,11 +286,10 @@ describe("models", () => {
 
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    const response = await models({} as any);
-    const body = (await response.json()) as ModelsResponse;
+    const result = await models({} as any);
 
-    expect(body.data).toHaveLength(1);
-    expect(body.data[0].id).toBe("openai/gpt-4");
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0].id).toBe("openai/gpt-4");
     expect(consoleSpy).toHaveBeenCalledWith(
       "Invalid response for provider nodata:",
       { object: "list" },
@@ -335,19 +320,17 @@ describe("models", () => {
       }),
     };
 
-    // Clear and reset providers
     Object.keys(Providers).forEach((key) => {
       delete Providers[key];
     });
 
     Providers.openai = vi.fn().mockReturnValue(multiModelProviderClass);
 
-    const response = await models({} as any);
-    const body = (await response.json()) as ModelsResponse;
+    const result = await models({} as any);
 
-    expect(body.data).toHaveLength(2);
-    expect(body.data[0].id).toBe("openai/gpt-4");
-    expect(body.data[1].id).toBe("openai/gpt-3.5-turbo");
+    expect(result.data).toHaveLength(2);
+    expect(result.data[0].id).toBe("openai/gpt-4");
+    expect(result.data[1].id).toBe("openai/gpt-3.5-turbo");
   });
 
   it("should return static models for custom providers when configured", async () => {
@@ -366,18 +349,16 @@ describe("models", () => {
       }),
     };
 
-    // Clear and reset providers
     Object.keys(Providers).forEach((key) => {
       delete Providers[key];
     });
 
     Providers.custom = vi.fn().mockReturnValue(staticModelsProviderClass);
 
-    const response = await models({} as any);
-    const body = (await response.json()) as ModelsResponse;
+    const result = await models({} as any);
 
-    expect(body.data).toHaveLength(1);
-    expect(body.data[0].id).toBe("custom/custom-model-1");
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0].id).toBe("custom/custom-model-1");
     expect(mockProviderClass.fetch).not.toHaveBeenCalled();
     expect(staticModelsProviderClass.staticModels).toHaveBeenCalled();
   });
@@ -389,7 +370,6 @@ describe("models", () => {
         .fn()
         .mockImplementation(
           (_url: string, init: RequestInit, apiKeyIndex?: number) => {
-            // Verify apiKeyIndex is passed correctly
             expect(apiKeyIndex).toBe(2);
             return Promise.resolve(new Response(JSON.stringify({ data: [] })));
           },
@@ -407,7 +387,6 @@ describe("models", () => {
       }),
     };
 
-    // Clear and reset providers
     Object.keys(Providers).forEach((key) => {
       delete Providers[key];
     });
@@ -415,14 +394,12 @@ describe("models", () => {
     Providers.test = vi.fn().mockReturnValue(testProviderClass);
     testProviderClass.getApiKeys.mockReturnValue(["key1", "key2", "key3"]);
 
-    // Mock CloudflareAIGateway.isSupportedProvider to return false
     vi.mocked(CloudflareAIGateway.isSupportedProvider).mockReturnValue(false);
 
-    const response = await models({ apiKeyIndex: 2 } as any);
-    const body = (await response.json()) as ModelsResponse;
+    const result = await models({ apiKeyIndex: 2 } as any);
 
-    expect(body.data).toHaveLength(1);
-    expect(body.data[0].id).toBe("test/test-model");
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0].id).toBe("test/test-model");
     expect(testProviderClass.fetch).toHaveBeenCalledWith(
       expect.any(String),
       expect.any(Object),

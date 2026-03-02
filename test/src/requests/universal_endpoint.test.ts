@@ -44,7 +44,6 @@ describe("universalEndpoint", () => {
 
     const request = new Request("https://example.com", {
       method: "POST",
-      body: JSON.stringify(requestBody),
       headers: { "Content-Type": "application/json" },
     });
 
@@ -53,7 +52,8 @@ describe("universalEndpoint", () => {
       { method: "POST", body: JSON.stringify([]) },
     ]);
 
-    await universalEndpoint(request, mockAIGateway as any);
+    // 新签名：universalEndpoint(request, aiGateway, body)
+    await universalEndpoint(request, mockAIGateway as any, requestBody);
 
     expect(mockAIGateway.buildUniversalEndpointRequest).toHaveBeenCalledWith({
       data: [
@@ -104,7 +104,6 @@ describe("universalEndpoint", () => {
 
     const request = new Request("https://example.com", {
       method: "POST",
-      body: JSON.stringify(requestBody),
       headers: { "Content-Type": "application/json" },
     });
 
@@ -113,7 +112,7 @@ describe("universalEndpoint", () => {
       { method: "POST", body: JSON.stringify([]) },
     ]);
 
-    await universalEndpoint(request, mockAIGateway as any);
+    await universalEndpoint(request, mockAIGateway as any, requestBody);
 
     expect(mockAIGateway.buildUniversalEndpointRequest).toHaveBeenCalledWith({
       data: [
@@ -159,7 +158,6 @@ describe("universalEndpoint", () => {
 
     const request = new Request("https://example.com", {
       method: "POST",
-      body: JSON.stringify(requestBody),
       headers: { "Content-Type": "application/json" },
     });
 
@@ -168,7 +166,7 @@ describe("universalEndpoint", () => {
       { method: "POST", body: JSON.stringify([]) },
     ]);
 
-    await universalEndpoint(request, mockAIGateway as any);
+    await universalEndpoint(request, mockAIGateway as any, requestBody);
 
     expect(mockAIGateway.buildUniversalEndpointRequest).toHaveBeenCalledWith({
       data: [
@@ -205,7 +203,6 @@ describe("universalEndpoint", () => {
 
     const request = new Request("https://example.com", {
       method: "POST",
-      body: JSON.stringify(requestBody),
       headers: { "Content-Type": "application/json" },
     });
 
@@ -214,7 +211,7 @@ describe("universalEndpoint", () => {
       { method: "POST", body: JSON.stringify([]) },
     ]);
 
-    await universalEndpoint(request, mockAIGateway as any);
+    await universalEndpoint(request, mockAIGateway as any, requestBody);
 
     expect(mockAIGateway.buildUniversalEndpointRequest).toHaveBeenCalledWith({
       data: [
@@ -247,12 +244,11 @@ describe("universalEndpoint", () => {
 
     const request = new Request("https://example.com", {
       method: "POST",
-      body: JSON.stringify(requestBody),
       headers: { "Content-Type": "application/json" },
     });
 
     await expect(
-      universalEndpoint(request, mockAIGateway as any),
+      universalEndpoint(request, mockAIGateway as any, requestBody),
     ).rejects.toThrow("Provider not specified.");
   });
 
@@ -269,12 +265,11 @@ describe("universalEndpoint", () => {
 
     const request = new Request("https://example.com", {
       method: "POST",
-      body: JSON.stringify(requestBody),
       headers: { "Content-Type": "application/json" },
     });
 
     await expect(
-      universalEndpoint(request, mockAIGateway as any),
+      universalEndpoint(request, mockAIGateway as any, requestBody),
     ).rejects.toThrow("Provider unsupported-provider is not supported.");
   });
 
@@ -292,7 +287,6 @@ describe("universalEndpoint", () => {
 
     const request = new Request("https://example.com", {
       method: "POST",
-      body: JSON.stringify(requestBody),
       headers: { "Content-Type": "application/json" },
     });
 
@@ -301,7 +295,7 @@ describe("universalEndpoint", () => {
       { method: "POST", body: JSON.stringify([]) },
     ]);
 
-    await universalEndpoint(request, mockAIGateway as any);
+    await universalEndpoint(request, mockAIGateway as any, requestBody);
 
     expect(mockAIGateway.buildUniversalEndpointRequest).toHaveBeenCalledWith({
       data: [
@@ -330,7 +324,6 @@ describe("universalEndpoint", () => {
       }),
     };
 
-    // Use a supported provider instead of 'custom'
     Providers.anthropic = vi.fn().mockReturnValue(customProviderClass);
 
     const requestBody = [
@@ -345,7 +338,6 @@ describe("universalEndpoint", () => {
 
     const request = new Request("https://example.com", {
       method: "POST",
-      body: JSON.stringify(requestBody),
       headers: { "Content-Type": "application/json" },
     });
 
@@ -354,7 +346,7 @@ describe("universalEndpoint", () => {
       { method: "POST", body: JSON.stringify([]) },
     ]);
 
-    await universalEndpoint(request, mockAIGateway as any);
+    await universalEndpoint(request, mockAIGateway as any, requestBody);
 
     expect(mockAIGateway.buildUniversalEndpointRequest).toHaveBeenCalledWith({
       data: [

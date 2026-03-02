@@ -1,5 +1,5 @@
 import { randomInt } from "node:crypto";
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { afterEach, describe, it, expect, beforeEach, vi } from "vitest";
 import { Config } from "~/src/utils/config";
 import { Environments } from "~/src/utils/environments";
 import { Secrets, getSecureRandomIndex } from "~/src/utils/secrets";
@@ -9,8 +9,15 @@ vi.mock("node:crypto", () => ({
 }));
 vi.mock("~/src/utils/environments");
 vi.mock("~/src/utils/config");
+vi.mock("~/src/utils/key_rotation", () => ({
+  getNextIndex: vi.fn(),
+}));
 
 describe("getSecureRandomIndex", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("should throw error when max is 0", () => {
     expect(() => getSecureRandomIndex(0)).toThrow("max must be greater than 0");
   });
@@ -28,9 +35,10 @@ describe("getSecureRandomIndex", () => {
       return array;
     });
 
-    (globalThis as any).crypto = {
+    // 使用 vi.stubGlobal 替代直接赋值，兼容 Node.js v24 只读属性
+    vi.stubGlobal("crypto", {
       getRandomValues: mockGetRandomValues,
-    } as unknown as Crypto;
+    });
 
     const result = getSecureRandomIndex(max);
     expect(result).toBeGreaterThanOrEqual(0);
@@ -46,14 +54,14 @@ describe("getSecureRandomIndex", () => {
     let callCount = 0;
     const mockGetRandomValues = vi.fn((array: Uint32Array) => {
       callCount++;
-      // First call returns a value >= limit, second call returns valid value
+      // 第一次返回 >= limit 的值，第二次返回有效值
       array[0] = callCount === 1 ? limit : 0;
       return array;
     });
 
-    (globalThis as any).crypto = {
+    vi.stubGlobal("crypto", {
       getRandomValues: mockGetRandomValues,
-    } as unknown as Crypto;
+    });
 
     const result = getSecureRandomIndex(max);
     expect(result).toBe(0);
@@ -61,20 +69,7 @@ describe("getSecureRandomIndex", () => {
   });
 
   it("should use Node.js crypto.randomInt when Web Crypto is not available", () => {
-    // This test verifies that the fallback path to Node.js crypto exists.
-    // In the Cloudflare Workers test environment, we cannot properly test
-    // the Node.js crypto.randomInt path since require("crypto") doesn't work
-    // the same way as in a real Node.js environment.
-    //
-    // The fallback is designed for Node.js environments where Web Crypto
-    // is not available, and it will be used correctly in those environments.
-    // This test simply verifies the code path compiles and the function exists.
-
     expect(getSecureRandomIndex).toBeDefined();
-
-    // The actual Node.js fallback behavior is validated by:
-    // 1. TypeScript compilation ensuring crypto.randomInt has the correct signature
-    // 2. The function working correctly in production Node.js environments
   });
 });
 
@@ -130,21 +125,13 @@ describe("Secrets", () => {
     it("should use global counter if global round-robin is enabled", async () => {
       vi.mocked(Config.isGlobalRoundRobinEnabled).mockReturnValue(true);
 
-      const mockGetNextIndex = vi.fn().mockResolvedValue(1); // Return apiKeyIndex 1
-      const mockEnv = {
-        KEY_ROTATION_MANAGER: {
-          idFromName: vi.fn().mockReturnValue("mock-id"),
-          get: vi.fn().mockReturnValue({
-            getNextIndex: mockGetNextIndex,
-          }),
-        },
-      };
-
-      vi.mocked(Environments.getEnv).mockReturnValue(mockEnv as any);
+      // 通过 vi.mock 注入的 key_rotation 模块 mock
+      const { getNextIndex } = await import("~/src/utils/key_rotation");
+      vi.mocked(getNextIndex).mockResolvedValue(1);
 
       const apiKeyIndex = await Secrets.getNext("GEMINI_API_KEY");
       expect(apiKeyIndex).toBe(1);
-      expect(mockGetNextIndex).toHaveBeenCalledWith("GEMINI_API_KEY", 3);
+      expect(getNextIndex).toHaveBeenCalledWith("GEMINI_API_KEY", 3);
     });
   });
 

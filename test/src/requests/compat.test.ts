@@ -14,7 +14,7 @@ describe("compat", () => {
   });
 
   it("forwards chat completions requests without leaking proxy authorization", async () => {
-    const body = JSON.stringify({ model: "gpt-4o", messages: [] });
+    const bodyStr = JSON.stringify({ model: "gpt-4o", messages: [] });
     const request = new Request(
       "https://example.com/g/test-gateway/compat/chat/completions",
       {
@@ -23,7 +23,6 @@ describe("compat", () => {
           "Content-Type": "application/json",
           Authorization: "Bearer proxy-api-key",
         },
-        body,
       },
     );
 
@@ -33,24 +32,27 @@ describe("compat", () => {
         {
           method: "POST",
           headers: { "cf-aig-authorization": "Bearer test" },
-          body,
+          body: bodyStr,
         },
       ]),
     } as unknown as CloudflareAIGateway;
 
-    await compat(request, "/compat/chat/completions", aiGateway);
+    // 新签名：compat(request, pathname, aiGateway, body?)
+    // body 作为第 4 个参数传入（Vafast 预解析后的 body）
+    await compat(request, "/compat/chat/completions", aiGateway, bodyStr);
 
     const callArgs = vi.mocked(aiGateway.buildCompatRequest).mock.calls[0][0];
     expect(callArgs.method).toBe("POST");
     expect(callArgs.path).toBe("/compat/chat/completions");
-    expect(callArgs.body).toBe(request.body);
+    // forwardBody 使用传入的 body 字符串，而非 request.body stream
+    expect(callArgs.body).toBe(bodyStr);
     expect(callArgs.headers.authorization).toBeUndefined();
 
     expect(fetch2).toHaveBeenCalledWith(
       "https://gateway.ai.cloudflare.com/v1/account/gateway/compat/chat/completions",
       expect.objectContaining({
         method: "POST",
-        body,
+        body: bodyStr,
         headers: { "cf-aig-authorization": "Bearer test" },
       }),
     );

@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Providers } from "~/src/providers";
 import { getAllProviders } from "~/src/providers";
-import { CustomOpenAI } from "~/src/providers/custom-openai";
 import { status } from "~/src/requests/status";
 import { Config } from "~/src/utils/config";
 import { Environments } from "~/src/utils/environments";
@@ -31,7 +30,6 @@ describe("status", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Clear Providers object
     Object.keys(Providers).forEach((key) => {
       delete Providers[key];
     });
@@ -45,7 +43,6 @@ describe("status", () => {
     });
     vi.mocked(Config.isGlobalRoundRobinEnabled).mockReturnValue(true);
 
-    vi.mocked(Environments.getEnv).mockReturnValue({} as Env);
     vi.mocked(Environments.all).mockReturnValue({} as any);
 
     Providers.openai = vi.fn().mockImplementation(() => {
@@ -76,12 +73,10 @@ describe("status", () => {
       new Response(null, { status: 200 }),
     );
 
-    const response = await status();
-    expect(response.status).toBe(200);
-    expect(response.headers.get("Content-Type")).toBe("application/json");
+    // status() 现在返回普通对象 { config, providers }
+    const result = await status();
 
-    const body = (await response.json()) as any;
-    expect(body.config).toEqual({
+    expect(result.config).toEqual({
       DEV: false,
       DEFAULT_MODEL: "gpt-4",
       AI_GATEWAY: {
@@ -92,14 +87,14 @@ describe("status", () => {
       GLOBAL_ROUND_ROBIN: true,
     });
 
-    expect(body.providers.openai).toBeDefined();
-    expect(body.providers.openai.available).toBe(true);
-    expect(body.providers.openai.keys).toHaveLength(2);
-    expect(body.providers.openai.keys[0]).toEqual({
+    expect(result.providers.openai).toBeDefined();
+    expect(result.providers.openai.available).toBe(true);
+    expect(result.providers.openai.keys).toHaveLength(2);
+    expect(result.providers.openai.keys[0]).toEqual({
       key: "*********789",
       status: "valid",
     });
-    expect(body.providers.openai.keys[1]).toEqual({
+    expect(result.providers.openai.keys[1]).toEqual({
       key: "*********ghi",
       status: "valid",
     });
@@ -111,10 +106,9 @@ describe("status", () => {
       new Response(null, { status: 401 }),
     );
 
-    const response = await status();
-    const body = (await response.json()) as any;
+    const result = await status();
 
-    expect(body.providers.openai.keys[0].status).toBe("invalid");
+    expect(result.providers.openai.keys[0].status).toBe("invalid");
   });
 
   it("should handle unknown status for other error codes", async () => {
@@ -123,10 +117,9 @@ describe("status", () => {
       new Response(null, { status: 500 }),
     );
 
-    const response = await status();
-    const body = (await response.json()) as any;
+    const result = await status();
 
-    expect(body.providers.openai.keys[0].status).toBe("unknown");
+    expect(result.providers.openai.keys[0].status).toBe("unknown");
   });
 
   it("should handle providers without API keys", async () => {
@@ -135,10 +128,9 @@ describe("status", () => {
       available: vi.fn().mockReturnValue(true),
     }));
 
-    const response = await status();
-    const body = (await response.json()) as any;
+    const result = await status();
 
-    expect(body.providers.nokeys).toEqual({
+    expect(result.providers.nokeys).toEqual({
       available: true,
       keys: [],
     });
@@ -153,11 +145,10 @@ describe("status", () => {
       new Response(null, { status: 200 }),
     );
 
-    const response = await status();
-    const body = (await response.json()) as any;
+    const result = await status();
 
-    expect(body.providers.openai.keys[0].key).toBe("**ort"); // Math.min(10, 5-3) = 2 stars
-    expect(body.providers.openai.keys[1].key).toBe("**********123"); // max 10 stars
+    expect(result.providers.openai.keys[0].key).toBe("**ort");
+    expect(result.providers.openai.keys[1].key).toBe("**********123");
   });
 
   it("should skip connectivity check when modelsPath is missing", async () => {
@@ -168,9 +159,8 @@ describe("status", () => {
     }));
     vi.mocked(Secrets.getAll).mockReturnValue(["any-key"]);
 
-    const response = await status();
-    const body = await response.json();
+    const result = await status();
 
-    expect(body.providers.skip.keys[0].status).toBe("unknown");
+    expect(result.providers.skip.keys[0].status).toBe("unknown");
   });
 });

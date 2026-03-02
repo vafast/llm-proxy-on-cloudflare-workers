@@ -48,17 +48,17 @@ describe("proxy", () => {
 
     const mockRequest = new Request("https://example.com/test/path", {
       method: "GET",
-      body: null,
       headers: new Headers(),
     });
 
-    await proxy({ request: mockRequest } as any, providerName, "/test/path");
+    // 新签名：proxy(request, providerName, pathname, body?)
+    await proxy(mockRequest, providerName, "/test/path");
 
     expect(mockProviderClass.fetch).toHaveBeenCalledWith(
       "/test/path",
       {
         method: mockRequest.method,
-        body: mockRequest.body,
+        body: null, // 无 body 参数时 forwardBody = null
         headers: mockRequest.headers,
       },
       0,
@@ -73,17 +73,16 @@ describe("proxy", () => {
 
     const mockRequest = new Request("https://example.com/test/test/path", {
       method: "GET",
-      body: null,
       headers: new Headers(),
     });
 
-    await proxy({ request: mockRequest } as any, providerName, "/test/path");
+    await proxy(mockRequest, providerName, "/test/path");
 
     expect(mockProviderClass.fetch).toHaveBeenCalledWith(
       "/test/path",
       {
         method: mockRequest.method,
-        body: mockRequest.body,
+        body: null,
         headers: mockRequest.headers,
       },
       0,

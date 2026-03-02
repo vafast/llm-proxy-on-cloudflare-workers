@@ -35,13 +35,6 @@ describe("chatCompletions", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(helpers.safeJsonParse).mockImplementation((str) => {
-      try {
-        return JSON.parse(str);
-      } catch {
-        return str;
-      }
-    });
     vi.mocked(helpers.fetch2).mockResolvedValue(new Response());
     vi.mocked(CloudflareAIGateway.isSupportedProvider).mockReturnValue(true);
     Providers.openai = vi.fn().mockImplementation(() => mockProviderClass);
@@ -63,7 +56,6 @@ describe("chatCompletions", () => {
 
     const request = new Request("https://example.com/chat/completions", {
       method: "POST",
-      body: JSON.stringify(requestBody),
       headers: { "Content-Type": "application/json" },
     });
 
@@ -76,7 +68,7 @@ describe("chatCompletions", () => {
     ]);
     mockProviderClass.fetch.mockResolvedValue(new Response());
 
-    await chatCompletions({ request } as any);
+    await chatCompletions(request, requestBody);
 
     expect(mockProviderClass.buildChatCompletionsRequest).toHaveBeenCalledWith({
       body: JSON.stringify({ ...requestBody, model: "gpt-4" }),
@@ -94,7 +86,6 @@ describe("chatCompletions", () => {
 
     const request = new Request("https://example.com/chat/completions", {
       method: "POST",
-      body: JSON.stringify(requestBody),
       headers: { "Content-Type": "application/json" },
     });
 
@@ -107,7 +98,7 @@ describe("chatCompletions", () => {
     ]);
     mockProviderClass.fetch.mockResolvedValue(new Response());
 
-    await chatCompletions({ request } as any);
+    await chatCompletions(request, requestBody);
 
     expect(Config.defaultModel).toHaveBeenCalled();
     expect(mockProviderClass.buildChatCompletionsRequest).toHaveBeenCalledWith({
@@ -117,18 +108,16 @@ describe("chatCompletions", () => {
     });
   });
 
-  it("should return 400 for invalid JSON", async () => {
+  it("should return 400 for invalid body", async () => {
     const request = new Request("https://example.com/chat/completions", {
       method: "POST",
-      body: "invalid json",
       headers: { "Content-Type": "application/json" },
     });
 
-    const response = await chatCompletions({ request } as any);
+    // 非对象类型的 body 会触发 400
+    const result = await chatCompletions(request, "invalid json");
 
-    expect(response.status).toBe(400);
-    const body = (await response.json()) as { error: string };
-    expect(body.error).toBe("Invalid request.");
+    expect(result).toEqual({ data: { error: "Invalid request." }, status: 400 });
   });
 
   it("should return 400 for invalid provider", async () => {
@@ -139,15 +128,12 @@ describe("chatCompletions", () => {
 
     const request = new Request("https://example.com/chat/completions", {
       method: "POST",
-      body: JSON.stringify(requestBody),
       headers: { "Content-Type": "application/json" },
     });
 
-    const response = await chatCompletions({ request } as any);
+    const result = await chatCompletions(request, requestBody);
 
-    expect(response.status).toBe(400);
-    const body = (await response.json()) as { error: string };
-    expect(body.error).toBe("Invalid provider.");
+    expect(result).toEqual({ data: { error: "Invalid provider." }, status: 400 });
   });
 
   it("should use AI Gateway when available and provider supported", async () => {
@@ -158,9 +144,10 @@ describe("chatCompletions", () => {
 
     const request = new Request("https://example.com/chat/completions", {
       method: "POST",
-      body: JSON.stringify(requestBody),
       headers: { "Content-Type": "application/json" },
     });
+    // aiGateway 通过 request 扩展属性传入
+    (request as any).aiGateway = mockAIGateway;
 
     mockProviderClass.buildChatCompletionsRequest.mockReturnValue([
       "/chat/completions",
@@ -174,7 +161,7 @@ describe("chatCompletions", () => {
       { method: "POST", body: JSON.stringify([]) },
     ]);
 
-    await chatCompletions({ request } as any, mockAIGateway as any);
+    await chatCompletions(request, requestBody);
 
     expect(CloudflareAIGateway.isSupportedProvider).toHaveBeenCalledWith(
       "openai",
@@ -197,7 +184,6 @@ describe("chatCompletions", () => {
 
     const request = new Request("https://example.com/chat/completions", {
       method: "POST",
-      body: JSON.stringify(requestBody),
       headers: {
         "Content-Type": "application/json",
         Authorization: "Bearer test-token",
@@ -213,7 +199,7 @@ describe("chatCompletions", () => {
     ]);
     mockProviderClass.fetch.mockResolvedValue(new Response());
 
-    await chatCompletions({ request } as any);
+    await chatCompletions(request, requestBody);
 
     const headersArg =
       mockProviderClass.buildChatCompletionsRequest.mock.calls[0][0].headers;
@@ -228,7 +214,6 @@ describe("chatCompletions", () => {
 
     const request = new Request("https://example.com/chat/completions", {
       method: "POST",
-      body: JSON.stringify(requestBody),
       headers: { "Content-Type": "application/json" },
     });
 
@@ -241,7 +226,7 @@ describe("chatCompletions", () => {
     ]);
     mockProviderClass.fetch.mockResolvedValue(new Response());
 
-    await chatCompletions({ request } as any);
+    await chatCompletions(request, requestBody);
 
     expect(mockProviderClass.buildChatCompletionsRequest).toHaveBeenCalledWith({
       body: JSON.stringify({ ...requestBody, model: "gpt-4/turbo" }),

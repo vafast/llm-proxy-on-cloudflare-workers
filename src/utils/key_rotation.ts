@@ -3,7 +3,7 @@
  *
  * 支持 Upstash Redis（分布式）和内存（单进程）两种实现
  */
-import { redisConfig } from "~/common/env";
+import { redisConfig } from "~/src/common/env";
 
 const memoryCounters = new Map<string, number>();
 
