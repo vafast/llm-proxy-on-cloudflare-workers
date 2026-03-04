@@ -1,43 +1,50 @@
 import { Anthropic } from "./providers/anthropic";
+import { Ark } from "./providers/ark";
 import { Cerebras } from "./providers/cerebras";
 import { Cohere } from "./providers/cohere";
 import { CustomOpenAI } from "./providers/custom-openai";
 import { DeepSeek } from "./providers/deepseek";
+import { Glm } from "./providers/glm";
 import { GoogleAiStudio } from "./providers/google-ai-studio";
 import { Grok } from "./providers/grok";
 import { Groq } from "./providers/groq";
 import { HuggingFace } from "./providers/huggingface";
+import { MiniMax } from "./providers/minimax";
 import { Mistral } from "./providers/mistral";
+import { Moonshot } from "./providers/moonshot";
 import { Ollama } from "./providers/ollama";
 import { OpenAI } from "./providers/openai";
 import { OpenRouter } from "./providers/openrouter";
 import { PerplexityAi } from "./providers/perplexity-ai";
 import { ProviderBase } from "./providers/provider";
+import { Qwen } from "./providers/qwen";
 import { Replicate } from "./providers/replicate";
 import { Config } from "./utils/config";
 
 export const Providers: {
   [providerName: string]: typeof ProviderBase;
 } = {
+  // 海外
   anthropic: Anthropic,
-  // "azure-openai": {} 待实现
-  // "cartesia": {} 待实现
   cerebras: Cerebras,
   cohere: Cohere,
-  deepseek: DeepSeek,
-  // elevenlabs: {} 待实现
   "google-ai-studio": GoogleAiStudio,
-  // "google-vertex-ai": {} 待实现
   grok: Grok,
   groq: Groq,
   huggingface: HuggingFace,
   mistral: Mistral,
+  ollama: Ollama,
   openai: OpenAI,
   openrouter: OpenRouter,
   "perplexity-ai": PerplexityAi,
   replicate: Replicate,
-  ollama: Ollama,
-  // --- 其他 Provider 待实现
+  // 中国
+  ark: Ark,
+  deepseek: DeepSeek,
+  glm: Glm,
+  minimax: MiniMax,
+  moonshot: Moonshot,
+  qwen: Qwen,
 };
 
 export function getProvider(

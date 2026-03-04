@@ -18,13 +18,12 @@ const parsed = cleanEnv(process.env, {
   // Redis（Key 轮询，可选。Railway 等会注入对应环境的连接串）
   REDIS_URL: str({ default: "" }),
 
-  // Provider API Keys
+  // Provider API Keys — 海外
   OPENAI_API_KEY: str({ default: "" }),
   GEMINI_API_KEY: str({ default: "" }),
   ANTHROPIC_API_KEY: str({ default: "" }),
   CEREBRAS_API_KEY: str({ default: "" }),
   COHERE_API_KEY: str({ default: "" }),
-  DEEPSEEK_API_KEY: str({ default: "" }),
   GROK_API_KEY: str({ default: "" }),
   GROQ_API_KEY: str({ default: "" }),
   MISTRAL_API_KEY: str({ default: "" }),
@@ -34,6 +33,13 @@ const parsed = cleanEnv(process.env, {
   REPLICATE_API_KEY: str({ default: "" }),
   CLOUDFLARE_API_KEY: str({ default: "" }),
   OLLAMA_API_KEY: str({ default: "" }),
+  // Provider API Keys — 中国
+  ARK_API_KEY: str({ default: "" }),
+  DEEPSEEK_API_KEY: str({ default: "" }),
+  GLM_API_KEY: str({ default: "" }),
+  MINIMAX_API_KEY: str({ default: "" }),
+  MOONSHOT_API_KEY: str({ default: "" }),
+  QWEN_API_KEY: str({ default: "" }),
 
   // 自定义 OpenAI 兼容端点（JSON 字符串）
   CUSTOM_OPENAI_ENDPOINTS: str({ default: "" }),
@@ -63,12 +69,12 @@ export const redisConfig = {
 } as const;
 
 export const providerKeys = {
+  // 海外
   OPENAI_API_KEY: parsed.OPENAI_API_KEY,
   GEMINI_API_KEY: parsed.GEMINI_API_KEY,
   ANTHROPIC_API_KEY: parsed.ANTHROPIC_API_KEY,
   CEREBRAS_API_KEY: parsed.CEREBRAS_API_KEY,
   COHERE_API_KEY: parsed.COHERE_API_KEY,
-  DEEPSEEK_API_KEY: parsed.DEEPSEEK_API_KEY,
   GROK_API_KEY: parsed.GROK_API_KEY,
   GROQ_API_KEY: parsed.GROQ_API_KEY,
   MISTRAL_API_KEY: parsed.MISTRAL_API_KEY,
@@ -78,5 +84,12 @@ export const providerKeys = {
   REPLICATE_API_KEY: parsed.REPLICATE_API_KEY,
   CLOUDFLARE_API_KEY: parsed.CLOUDFLARE_API_KEY,
   OLLAMA_API_KEY: parsed.OLLAMA_API_KEY,
+  // 中国
+  ARK_API_KEY: parsed.ARK_API_KEY,
+  DEEPSEEK_API_KEY: parsed.DEEPSEEK_API_KEY,
+  GLM_API_KEY: parsed.GLM_API_KEY,
+  MINIMAX_API_KEY: parsed.MINIMAX_API_KEY,
+  MOONSHOT_API_KEY: parsed.MOONSHOT_API_KEY,
+  QWEN_API_KEY: parsed.QWEN_API_KEY,
   CUSTOM_OPENAI_ENDPOINTS: parsed.CUSTOM_OPENAI_ENDPOINTS,
 } as const;

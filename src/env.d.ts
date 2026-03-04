@@ -7,12 +7,12 @@ declare global {
   interface Env {
     PROXY_API_KEY?: string;
     CLOUDFLARE_ACCOUNT_ID?: string;
+    // 海外
     OPENAI_API_KEY?: string;
     GEMINI_API_KEY?: string;
     ANTHROPIC_API_KEY?: string;
     CEREBRAS_API_KEY?: string;
     COHERE_API_KEY?: string;
-    DEEPSEEK_API_KEY?: string;
     GROK_API_KEY?: string;
     GROQ_API_KEY?: string;
     MISTRAL_API_KEY?: string;
@@ -22,6 +22,13 @@ declare global {
     REPLICATE_API_KEY?: string;
     CLOUDFLARE_API_KEY?: string;
     OLLAMA_API_KEY?: string;
+    // 中国
+    ARK_API_KEY?: string;
+    DEEPSEEK_API_KEY?: string;
+    GLM_API_KEY?: string;
+    MINIMAX_API_KEY?: string;
+    MOONSHOT_API_KEY?: string;
+    QWEN_API_KEY?: string;
     CUSTOM_OPENAI_ENDPOINTS?: string;
     DEV?: string;
     DEFAULT_MODEL?: string;
