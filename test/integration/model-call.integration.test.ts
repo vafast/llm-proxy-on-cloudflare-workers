@@ -34,7 +34,7 @@ async function chat(
     body: JSON.stringify({
       model: providerModel,
       messages: [{ role: "user", content: "回复一个字：好" }],
-      max_tokens: 10,
+      max_tokens: 256,
       stream: options.stream ?? false,
     }),
   });
@@ -53,7 +53,7 @@ async function chat(
       if (!data) continue;
       try {
         const json = JSON.parse(data);
-        const delta = json.choices?.[0]?.delta?.content ?? json.choices?.[0]?.delta?.reasoning_content;
+        const delta = json.choices?.[0]?.delta?.content;
         if (delta) content += delta;
       } catch {
         // ignore parse errors
@@ -119,7 +119,7 @@ describe("模型调用集成测试", () => {
         expect(typeof result.content).toBe("string");
         expect(result.content!.length).toBeGreaterThan(0);
       },
-      30_000,
+      60_000,
     );
 
     it.skipIf(!hasKey(envKey))(
@@ -131,7 +131,7 @@ describe("模型调用集成测试", () => {
         expect(typeof result.content).toBe("string");
         expect(result.content!.length).toBeGreaterThan(0);
       },
-      30_000,
+      60_000,
     );
   }
 });

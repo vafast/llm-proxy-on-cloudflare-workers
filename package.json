@@ -13,6 +13,7 @@
     "test:integration": "dotenvx run -f .env.development -- vitest run test/integration/api.integration.test.ts",
     "test:integration:model": "dotenvx run -f .env.development -- vitest run test/integration/model-call.integration.test.ts",
     "test:integration:all": "dotenvx run -f .env.development -- vitest run test/integration/",
+    "test:ci": "dotenvx run -f .env.development -- vitest run --config vitest.ci.config.mts",
     "lint": "eslint 'src/**/*.ts'",
     "lint:fix": "eslint --fix 'src/**/*.ts'"
   },
